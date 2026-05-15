@@ -109,7 +109,7 @@ QString PythonRunner::scripts_dir() const {
 // ── Standard Python environment ──────────────────────────────────────────────
 // Shared by PythonRunner::run() and external direct-QProcess callers
 // (e.g., AgentService's stdin/stream paths). Anything every Python spawn needs
-// — encoding pins, FINCEPT_DATA_DIR, FINAGENT_DATA_DIR, base PYTHONPATH — lives
+// — encoding pins, PINPUNCH_DATA_DIR, FINAGENT_DATA_DIR, base PYTHONPATH — lives
 // here. Script-specific path additions (parent-of-pkg) stay in run().
 QProcessEnvironment PythonRunner::build_python_env() const {
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
@@ -118,9 +118,9 @@ QProcessEnvironment PythonRunner::build_python_env() const {
     env.insert("PYTHONUNBUFFERED", "1");
 
     const QString install_dir = PythonSetupManager::instance().install_dir();
-    env.insert("FINCEPT_DATA_DIR", install_dir);
+    env.insert("PINPUNCH_DATA_DIR", install_dir);
 
-    // FINAGENT_DATA_DIR: default to <FINCEPT_DATA_DIR>/finagent. Always overwrite
+    // FINAGENT_DATA_DIR: default to <PINPUNCH_DATA_DIR>/finagent. Always overwrite
     // so we match what resources.py expects regardless of what the user shell
     // inherited — the app owns its own per-persona storage root.
     env.insert("FINAGENT_DATA_DIR", install_dir + "/finagent");
@@ -209,6 +209,21 @@ QString PythonRunner::find_python_sync() const {
             return candidate;
         }
     }
+
+#ifdef __APPLE__
+    // 3. macOS Command Line Tools Python is the most predictable target on a
+    // developer Mac: it's always at /usr/bin/python3 (a stub that delegates to
+    // /Library/Developer/CommandLineTools/usr/bin/python3), it's the version
+    // `pip3 install --user` defaults to, and it bypasses PATH lookup which
+    // otherwise picks up Homebrew/anaconda/pyenv pythons that may NOT have
+    // the project's deps (yfinance, pandas, etc.) installed. Using an
+    // absolute path also avoids the launchd-vs-shell PATH disparity entirely.
+    static const QString clt_python = QStringLiteral("/usr/bin/python3");
+    if (QFileInfo::exists(clt_python)) {
+        LOG_INFO("Python", "Using macOS Command Line Tools Python: " + clt_python);
+        return clt_python;
+    }
+#endif
 
     return {}; // No venv found — need async system python check
 }
@@ -447,7 +462,7 @@ void PythonRunner::start_next() {
             }
         }
 
-        // Start from the shared base env (encoding pins, FINCEPT_DATA_DIR,
+        // Start from the shared base env (encoding pins, PINPUNCH_DATA_DIR,
         // FINAGENT_DATA_DIR, base PYTHONPATH = scripts_dir_).
         QProcessEnvironment env = build_python_env();
 

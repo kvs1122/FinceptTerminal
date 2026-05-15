@@ -11,6 +11,7 @@
 #include "ui/theme/Theme.h"
 #include "ui/theme/ThemeManager.h"
 
+#include <QCompleter>
 #include <QFormLayout>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -18,6 +19,7 @@
 #include <QMessageBox>
 #include <QScrollArea>
 #include <QSplitter>
+#include <QStringListModel>
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -27,8 +29,11 @@ namespace fincept::screens {
 
 static constexpr const char* TAG = "LlmConfigSection";
 
+// Pinpunch local-only mode: "fincept" provider dropped (it pointed at the
+// Fincept-hosted managed LLM at api.fincept.in). Cerebras added — uses an
+// OpenAI-compatible endpoint at api.cerebras.ai/v1.
 const QStringList LlmConfigSection::KNOWN_PROVIDERS = {"openai",  "anthropic", "gemini",   "groq",  "deepseek",
-                                                       "openrouter", "minimax", "kimi", "ollama", "xai",   "fincept"};
+                                                       "openrouter", "minimax", "kimi", "ollama", "xai", "cerebras"};
 
 QString LlmConfigSection::default_base_url(const QString& provider) {
     const QString p = provider.toLower();
@@ -324,12 +329,20 @@ QWidget* LlmConfigSection::build_form_panel() {
     auto* p_lbl = new QLabel("Provider");
     lbl_style(p_lbl);
     provider_edit_ = new QLineEdit;
-    provider_edit_->setPlaceholderText("e.g. openai");
-    provider_edit_->setReadOnly(true); // set by selection
+    provider_edit_->setPlaceholderText("xai, cerebras, openai, anthropic, gemini, groq, ollama, …");
+    // Editable + autocomplete from KNOWN_PROVIDERS so the user can either
+    // type freely or pick from the well-known list. Previously the field
+    // was read-only and only set by clicking an entry in the (often empty)
+    // sidebar, which made the form look unusable on a fresh install. The
+    // sidebar's "+ Add" button is still the canonical add path; this just
+    // gives the user a second, more obvious entry point.
+    provider_edit_->setReadOnly(false);
+    auto* completer = new QCompleter(KNOWN_PROVIDERS, provider_edit_);
+    completer->setCaseSensitivity(Qt::CaseInsensitive);
+    completer->setCompletionMode(QCompleter::PopupCompletion);
+    completer->setFilterMode(Qt::MatchContains);
+    provider_edit_->setCompleter(completer);
     field_style(provider_edit_);
-    provider_edit_->setStyleSheet(provider_edit_->styleSheet() +
-                                  "QLineEdit{background:" + QString(ui::colors::BG_SURFACE()) +
-                                  ";color:" + QString(ui::colors::TEXT_TERTIARY()) + ";}");
     form->addRow(p_lbl, provider_edit_);
 
     auto* k_lbl = new QLabel("API Key");
@@ -559,14 +572,17 @@ void LlmConfigSection::load_providers() {
     auto result = LlmConfigRepository::instance().list_providers();
     if (result.is_ok()) {
         for (const auto& p : result.value()) {
-            bool is_fincept = (p.provider.toLower() == "fincept");
-            QString display = is_fincept ? "Fincept LLM" : p.provider;
+            // Pinpunch is local-only — the "fincept" provider would talk to
+            // api.fincept.in (the Fincept-hosted managed LLM) and is not
+            // selectable here. Skip it so it doesn't confuse the picker.
+            if (p.provider.toLower() == "fincept")
+                continue;
+            QString display = p.provider;
             if (p.is_active) {
                 display += "  ✓";
                 active_provider = p.provider;
             }
-            // Show model tag only for non-fincept providers
-            if (!is_fincept && !p.model.isEmpty())
+            if (!p.model.isEmpty())
                 display += "  [" + p.model + "]";
             auto* item = new QListWidgetItem(display);
             item->setData(Qt::UserRole, p.provider);

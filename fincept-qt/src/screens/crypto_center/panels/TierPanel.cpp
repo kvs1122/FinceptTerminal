@@ -269,7 +269,7 @@ void TierPanel::render_state(fincept::wallet::TierStatus::Tier current,
                               .arg(next_threshold_ui_str));
         footer_->show();
     } else if (current == Tier::Gold) {
-        footer_->setText(tr("All Fincept Terminal features unlocked."));
+        footer_->setText(tr("All Pinpunch Terminal features unlocked."));
         footer_->show();
     } else {
         footer_->hide();

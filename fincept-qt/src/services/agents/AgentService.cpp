@@ -162,7 +162,7 @@ QJsonObject AgentService::build_api_keys() const {
         const auto& session = auth::AuthManager::instance().session();
         if (!session.api_key.isEmpty()) {
             keys["fincept"] = session.api_key;
-            keys["FINCEPT_API_KEY"] = session.api_key;
+            keys["PINPUNCH_API_KEY"] = session.api_key;
         }
     }
 
@@ -347,7 +347,7 @@ void AgentService::run_python_stdin(const QString& action, const QJsonObject& pa
     // Spawn QProcess directly for stdin writing (P4 exception like ExchangeService)
     auto* proc = new QProcess(this);
     // Share the standard Python env + cwd + Windows console suppression with
-    // PythonRunner so every finagent spawn sees the same FINCEPT_DATA_DIR,
+    // PythonRunner so every finagent spawn sees the same PINPUNCH_DATA_DIR,
     // FINAGENT_DATA_DIR, and PYTHONPATH.
     proc->setProcessEnvironment(py.build_python_env());
     proc->setWorkingDirectory(py.scripts_dir());
@@ -620,7 +620,7 @@ QString AgentService::run_agent_streaming(const QString& query, const QJsonObjec
 
     auto* proc = new QProcess(this);
     // Share the standard Python env + cwd + Windows console suppression with
-    // PythonRunner so every finagent spawn sees the same FINCEPT_DATA_DIR,
+    // PythonRunner so every finagent spawn sees the same PINPUNCH_DATA_DIR,
     // FINAGENT_DATA_DIR, and PYTHONPATH.
     proc->setProcessEnvironment(py.build_python_env());
     proc->setWorkingDirectory(py.scripts_dir());
@@ -826,7 +826,7 @@ QString AgentService::run_team(const QString& query, const QJsonObject& team_con
 
     auto* proc = new QProcess(this);
     // Share the standard Python env + cwd + Windows console suppression with
-    // PythonRunner so every finagent spawn sees the same FINCEPT_DATA_DIR,
+    // PythonRunner so every finagent spawn sees the same PINPUNCH_DATA_DIR,
     // FINAGENT_DATA_DIR, and PYTHONPATH.
     proc->setProcessEnvironment(py.build_python_env());
     proc->setWorkingDirectory(py.scripts_dir());

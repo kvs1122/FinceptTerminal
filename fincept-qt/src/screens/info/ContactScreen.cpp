@@ -117,7 +117,7 @@ ContactScreen::ContactScreen(QWidget* parent) : QWidget(parent) {
         grid->setSpacing(10);
 
         grid->addWidget(make_contact_card("EMAIL SUPPORT", "support@fincept.in", "Response within 4-6 hours"), 0, 0);
-        grid->addWidget(make_contact_card("PHONE SUPPORT", "+1-800-FINCEPT", "Mon-Fri, 9AM-6PM EST"), 0, 1);
+        grid->addWidget(make_contact_card("PHONE SUPPORT", "+1-800-PINPUNCH", "Mon-Fri, 9AM-6PM EST"), 0, 1);
         grid->addWidget(make_contact_card("SUPPORT HOURS", "Mon-Fri 9AM-6PM EST", "Saturday 10AM-4PM EST"), 1, 0);
         grid->addWidget(make_contact_card("OFFICE", "Fincept Corporation", "New York, United States"), 1, 1);
 

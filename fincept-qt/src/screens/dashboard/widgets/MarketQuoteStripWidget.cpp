@@ -150,8 +150,14 @@ void MarketQuoteStripWidget::on_quote(const fincept::services::QuoteData& q) {
     const QColor col = q.change_pct >= 0 ? ui::colors::POSITIVE() : ui::colors::NEGATIVE();
     r.change->setStyleSheet(
         QString("color:%1;font-size:11px;font-weight:600;background:transparent;").arg(col.name()));
+    const bool was_empty = received_.isEmpty();
     received_.insert(q.symbol);
-    set_loading_progress(received_.size(), symbols_.size());
+    if (was_empty) {
+        // First quote ever — drop the loading overlay and let any further
+        // refreshes silently update the visible rows. Keeps the strip from
+        // re-flashing the skeleton when one symbol fails to publish.
+        set_loading(false);
+    }
 }
 
 QDialog* MarketQuoteStripWidget::make_config_dialog(QWidget* parent) {

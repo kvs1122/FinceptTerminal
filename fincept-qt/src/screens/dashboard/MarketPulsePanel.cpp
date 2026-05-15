@@ -1,6 +1,8 @@
 #include "screens/dashboard/MarketPulsePanel.h"
 
 #include "screens/dashboard/widgets/LoadingOverlay.h"
+#include "services/bot/BotConfig.h"
+#include "services/bot/PolygonRestClient.h"
 #include "services/markets/MarketDataService.h"
 #include "ui/theme/Theme.h"
 #include "ui/theme/ThemeManager.h"
@@ -9,10 +11,20 @@
 #    include "datahub/DataHubMetaTypes.h"
 #    include <QSet>
 
+#include <QCoreApplication>
+#include <QDate>
 #include <QDateTime>
 #include <QFrame>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonParseError>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QPalette>
 #include <QShowEvent>
+#include <QUrl>
+#include <QUrlQuery>
 
 #include <algorithm>
 
@@ -116,6 +128,7 @@ MarketPulsePanel::MarketPulsePanel(QWidget* parent) : QWidget(parent) {
     cl->addWidget(build_losers_section());
     cl->addWidget(build_global_snapshot_section());
     cl->addWidget(build_market_hours_section());
+    cl->addWidget(build_ticker_search_section());
     cl->addStretch();
 
     scroll_area_->setWidget(content);
@@ -1021,6 +1034,442 @@ void MarketPulsePanel::refresh_data() {
     push(kMoverSymbols);
     push(kSnapshotSymbols);
     hub.request(topics, /*force=*/true);  // user-triggered refresh
+}
+
+// ── Ticker search section (Polygon + Finnhub) ───────────────────────────
+//
+// Sits below Market Hours. Accepts a ticker (TSLA) or company name (Tesla)
+// and hits four endpoints in parallel:
+//   1. Polygon /v3/snapshot           — current price + day high/low
+//   2. Polygon /v3/reference/tickers/ — market cap + canonical name
+//   3. Polygon /v2/aggs/ticker/…/range/1/day/<from>/<to> — 52w high/low
+//   4. Finnhub /stock/earnings        — last EPS actual + estimate + surprise
+//
+// Results render as each call completes (no waiting for all four), so the
+// fastest field appears first. A monotonically-increasing generation
+// counter discards stale callbacks if the user types a new query while
+// previous responses are in flight.
+
+namespace {
+
+QString format_money(double v) {
+    if (v <= 0) return QStringLiteral("—");
+    if (v >= 1e12) return QString::asprintf("$%.2fT", v / 1e12);
+    if (v >= 1e9)  return QString::asprintf("$%.2fB", v / 1e9);
+    if (v >= 1e6)  return QString::asprintf("$%.2fM", v / 1e6);
+    if (v >= 1e3)  return QString::asprintf("$%.2fK", v / 1e3);
+    return QString::asprintf("$%.2f", v);
+}
+
+QString format_price(double v, int decimals = 2) {
+    if (v <= 0) return QStringLiteral("—");
+    return QString::asprintf("$%.*f", decimals, v);
+}
+
+QString format_pct(double v) {
+    return QString::asprintf("%s%.2f%%", v >= 0 ? "+" : "", v);
+}
+
+// qApp-parented QNAM for the small Finnhub helper. Lazy-init on first call,
+// torn down via aboutToQuit so we don't race the network worker thread on
+// shutdown (same pattern as AlpacaRestClient).
+QNetworkAccessManager* finnhub_nam() {
+    static QNetworkAccessManager* nam = nullptr;
+    if (!nam && qApp) {
+        nam = new QNetworkAccessManager(qApp);
+        QObject::connect(qApp, &QCoreApplication::aboutToQuit, nam, [&]() {
+            if (nam) { nam->deleteLater(); nam = nullptr; }
+        });
+    }
+    return nam;
+}
+
+} // namespace
+
+QWidget* MarketPulsePanel::build_ticker_search_section() {
+    auto* w = new QWidget(this);
+    w->setStyleSheet(QString("background:%1;").arg(ui::colors::BG_BASE()));
+    auto* vl = new QVBoxLayout(w);
+    vl->setContentsMargins(8, 6, 8, 8);
+    vl->setSpacing(4);
+
+    // Section header — match the others (icon char + title).
+    auto* hdr = build_section_header("TICKER LOOKUP", "?", ui::colors::AMBER());
+    vl->addWidget(hdr);
+
+    // Search row: input + button
+    auto* row = new QHBoxLayout;
+    row->setSpacing(4);
+    search_input_ = new QLineEdit(w);
+    search_input_->setPlaceholderText("TSLA or Tesla …");
+    search_input_->setStyleSheet(QString(
+        "QLineEdit{background:%1;color:%2;border:1px solid %3;"
+        " padding:3px 6px;font-size:11px;}"
+        "QLineEdit:focus{border-color:%4;}")
+        .arg(ui::colors::BG_SURFACE(), ui::colors::TEXT_PRIMARY(),
+             ui::colors::BORDER_DIM(), ui::colors::AMBER()));
+    row->addWidget(search_input_, 1);
+
+    search_btn_ = new QPushButton("Search", w);
+    search_btn_->setCursor(Qt::PointingHandCursor);
+    search_btn_->setStyleSheet(QString(
+        "QPushButton{background:%1;color:%2;border:none;"
+        " padding:3px 12px;font-size:10px;font-weight:bold;}"
+        "QPushButton:hover{background:%3;}")
+        .arg(ui::colors::AMBER(), ui::colors::BG_BASE(), ui::colors::BG_HOVER()));
+    row->addWidget(search_btn_);
+    vl->addLayout(row);
+
+    // Status label (hidden when empty) — used for "Searching…", errors,
+    // "Not found" etc.
+    search_status_ = new QLabel(w);
+    search_status_->setStyleSheet(QString("color:%1;font-size:10px;background:transparent;")
+                                      .arg(ui::colors::TEXT_TERTIARY()));
+    search_status_->setVisible(false);
+    vl->addWidget(search_status_);
+
+    // Result panel — hidden until data arrives. Uses a tight grid of
+    // labels because we want every field on its own row, terminal-style.
+    search_result_box_ = new QWidget(w);
+    search_result_box_->setStyleSheet(QString(
+        "background:%1;border:1px solid %2;").arg(
+            ui::colors::BG_SURFACE(), ui::colors::BORDER_DIM()));
+    auto* rl = new QVBoxLayout(search_result_box_);
+    rl->setContentsMargins(8, 6, 8, 6);
+    rl->setSpacing(2);
+    auto mk_lbl = [&](QLabel*& slot, const char* css = nullptr) {
+        slot = new QLabel("—", search_result_box_);
+        slot->setStyleSheet(css
+            ? QString(css)
+            : QString("color:%1;font-size:10.5px;background:transparent;")
+                  .arg(ui::colors::TEXT_PRIMARY()));
+        rl->addWidget(slot);
+    };
+    mk_lbl(sr_symbol_, QString("color:%1;font-size:11.5px;font-weight:bold;background:transparent;")
+                           .arg(ui::colors::AMBER()).toUtf8().constData());
+    mk_lbl(sr_price_,     QString("color:%1;font-size:13px;font-weight:bold;background:transparent;")
+                              .arg(ui::colors::TEXT_PRIMARY()).toUtf8().constData());
+    mk_lbl(sr_day_range_);
+    mk_lbl(sr_52w_range_);
+    mk_lbl(sr_mcap_);
+    // EPS block — small visual separator
+    auto* eps_sep = new QFrame(search_result_box_);
+    eps_sep->setFrameShape(QFrame::HLine);
+    eps_sep->setStyleSheet(QString("color:%1;background:%1;").arg(ui::colors::BORDER_DIM()));
+    eps_sep->setFixedHeight(1);
+    rl->addWidget(eps_sep);
+    mk_lbl(sr_eps_actual_);
+    mk_lbl(sr_eps_est_);
+    mk_lbl(sr_eps_surp_);
+    mk_lbl(sr_eps_date_, QString("color:%1;font-size:9px;background:transparent;")
+                             .arg(ui::colors::TEXT_TERTIARY()).toUtf8().constData());
+    search_result_box_->setVisible(false);
+    vl->addWidget(search_result_box_);
+
+    QObject::connect(search_btn_,   &QPushButton::clicked, this, &MarketPulsePanel::on_search_submit);
+    QObject::connect(search_input_, &QLineEdit::returnPressed, this, &MarketPulsePanel::on_search_submit);
+
+    return w;
+}
+
+void MarketPulsePanel::render_search_status(const QString& msg, bool error) {
+    if (!search_status_) return;
+    if (msg.isEmpty()) {
+        search_status_->setVisible(false);
+        return;
+    }
+    search_status_->setText(msg);
+    search_status_->setStyleSheet(QString("color:%1;font-size:10px;background:transparent;")
+                                      .arg(error ? ui::colors::NEGATIVE() : ui::colors::TEXT_TERTIARY()));
+    search_status_->setVisible(true);
+}
+
+void MarketPulsePanel::on_search_submit() {
+    if (!search_input_) return;
+    const QString query = search_input_->text().trimmed();
+    if (query.isEmpty()) return;
+
+    // Bump generation so any stale in-flight callbacks bail.
+    ++current_search_gen_;
+    current_search_ = SearchState{};
+    search_result_box_->setVisible(false);
+    render_search_status(QStringLiteral("Searching for \"%1\"…").arg(query), false);
+
+    if (!services::bot::PolygonRestClient::instance().is_configured()) {
+        render_search_status(QStringLiteral("No Polygon API key — set POLYGON_API_KEY in ~/grok-claude/.env"),
+                             true);
+        return;
+    }
+
+    const qint64 gen = current_search_gen_;
+
+    // Two-phase resolution to handle the Polygon search-ranking quirk:
+    //
+    //   /v3/reference/tickers?search=TSLA  → fuzzy match across ticker
+    //                                        AND company name. Returns
+    //                                        ETFs containing "TSLA" in
+    //                                        their name BEFORE the actual
+    //                                        TSLA ticker (Polygon's
+    //                                        relevance ranking).
+    //   /v3/reference/tickers/TSLA         → exact ticker hit, returns
+    //                                        TSLA directly.
+    //
+    // So: if the input looks like a ticker (1-8 letters, optional . or -),
+    // try the exact endpoint FIRST. If 404 / empty, fall through to the
+    // fuzzy-search path. Free-text queries like "tesla" or "apple inc"
+    // skip the exact step and go straight to fuzzy.
+    auto looks_like_ticker = [](const QString& q) {
+        if (q.isEmpty() || q.length() > 8) return false;
+        for (QChar c : q) {
+            if (!c.isLetter() && c != QChar('.') && c != QChar('-')) return false;
+        }
+        return true;
+    };
+
+    if (looks_like_ticker(query)) {
+        const QString upper = query.toUpper();
+        services::bot::PolygonRestClient::instance().get_ticker_details(upper,
+            [this, gen, query, upper](bool ok, const QJsonValue& v, const QString& /*err*/) {
+                if (gen != current_search_gen_) return;
+                if (ok && v.isObject()) {
+                    const QJsonObject r = v.toObject().value("results").toObject();
+                    const QString ticker = r.value("ticker").toString();
+                    if (!ticker.isEmpty()) {
+                        current_search_.ticker     = ticker;
+                        current_search_.name       = r.value("name").toString();
+                        current_search_.market_cap = r.value("market_cap").toDouble();
+                        current_search_.has_details = true;
+                        render_search_status(QStringLiteral("Resolved → %1").arg(ticker), false);
+                        search_result_box_->setVisible(true);
+                        render_search_result();
+                        // Snapshot + 52w + Finnhub still need to run; details
+                        // already populated above so the redundant ticker_details
+                        // call inside start_polygon_chain is a small price for
+                        // shared-codepath simplicity.
+                        start_polygon_chain(gen);
+                        fetch_finnhub_earnings(gen, ticker);
+                        return;
+                    }
+                }
+                // Exact lookup didn't resolve (typo, delisted, etc.) →
+                // fall back to fuzzy search.
+                start_fuzzy_search(gen, query);
+            });
+    } else {
+        start_fuzzy_search(gen, query);
+    }
+}
+
+void MarketPulsePanel::start_fuzzy_search(qint64 gen, const QString& query) {
+    services::bot::PolygonRestClient::instance().search_ticker(query, /*limit=*/10,
+        [this, gen, query](bool ok, const QJsonValue& v, const QString& err) {
+            if (gen != current_search_gen_) return;
+            if (!ok || !v.isObject()) {
+                render_search_status(QStringLiteral("Search failed: %1").arg(err.left(120)), true);
+                return;
+            }
+            const QJsonArray results = v.toObject().value("results").toArray();
+            if (results.isEmpty()) {
+                render_search_status(QStringLiteral("No matching ticker"), true);
+                return;
+            }
+            // Re-rank locally: prefer any result whose ticker is an EXACT
+            // match for the (uppercased) query before falling back to
+            // Polygon's relevance ranking. This rescues "TSLA" (which
+            // Polygon was returning as CRSH first) when the exact-ticker
+            // probe above didn't run for some reason. For free-text input
+            // like "tesla", no exact match exists → first result wins.
+            const QString upper = query.toUpper();
+            QJsonObject hit;
+            for (const auto& rv : results) {
+                const QJsonObject ro = rv.toObject();
+                if (ro.value("ticker").toString().compare(upper, Qt::CaseInsensitive) == 0) {
+                    hit = ro;
+                    break;
+                }
+            }
+            if (hit.isEmpty()) hit = results.first().toObject();
+
+            current_search_.ticker = hit.value("ticker").toString();
+            current_search_.name   = hit.value("name").toString();
+            if (current_search_.ticker.isEmpty()) {
+                render_search_status(QStringLiteral("Ticker missing in result"), true);
+                return;
+            }
+            render_search_status(QStringLiteral("Resolved → %1").arg(current_search_.ticker), false);
+            search_result_box_->setVisible(true);
+            render_search_result();
+            start_polygon_chain(gen);
+            fetch_finnhub_earnings(gen, current_search_.ticker);
+        });
+}
+
+void MarketPulsePanel::start_polygon_chain(qint64 gen) {
+    const QString sym = current_search_.ticker;
+    auto& poly = services::bot::PolygonRestClient::instance();
+
+    // Snapshot — current price, change, day high/low.
+    poly.get_snapshots({sym}, [this, gen](bool ok, const QJsonValue& v, const QString& /*err*/) {
+        if (gen != current_search_gen_) return;
+        if (!ok || !v.isObject()) return;
+        const QJsonArray rs = v.toObject().value("results").toArray();
+        if (rs.isEmpty()) return;
+        const QJsonObject sess = rs.first().toObject().value("session").toObject();
+        current_search_.current_price = sess.value("price").toDouble();
+        current_search_.change_pct    = sess.value("change_percent").toDouble();
+        current_search_.day_high      = sess.value("high").toDouble();
+        current_search_.day_low       = sess.value("low").toDouble();
+        current_search_.has_snapshot  = true;
+        render_search_result();
+    });
+
+    // Reference details — market cap (and sometimes a richer name).
+    poly.get_ticker_details(sym, [this, gen](bool ok, const QJsonValue& v, const QString& /*err*/) {
+        if (gen != current_search_gen_) return;
+        if (!ok || !v.isObject()) return;
+        const QJsonObject r = v.toObject().value("results").toObject();
+        const QString nm = r.value("name").toString();
+        if (!nm.isEmpty()) current_search_.name = nm;
+        current_search_.market_cap = r.value("market_cap").toDouble();
+        current_search_.has_details = true;
+        render_search_result();
+    });
+
+    // 52-week aggregates — daily bars over the last ~370 days; reduce to
+    // hi/lo. limit=400 keeps the response small and well under Polygon's
+    // 50000 cap. Sort desc so newest is first; either way we walk the
+    // whole array.
+    const QString today = QDate::currentDate().toString("yyyy-MM-dd");
+    const QString from  = QDate::currentDate().addDays(-370).toString("yyyy-MM-dd");
+    poly.get_aggregates(sym, from, today, "asc", 400,
+        [this, gen](bool ok, const QJsonValue& v, const QString& /*err*/) {
+            if (gen != current_search_gen_) return;
+            if (!ok || !v.isObject()) return;
+            const QJsonArray bars = v.toObject().value("results").toArray();
+            if (bars.isEmpty()) return;
+            double hi = 0, lo = 1e18;
+            for (const auto& b : bars) {
+                const QJsonObject bo = b.toObject();
+                const double h = bo.value("h").toDouble();
+                const double l = bo.value("l").toDouble();
+                if (h > hi) hi = h;
+                if (l < lo && l > 0) lo = l;
+            }
+            current_search_.w52_high = hi;
+            current_search_.w52_low  = (lo == 1e18 ? 0 : lo);
+            current_search_.has_w52  = true;
+            render_search_result();
+        });
+}
+
+void MarketPulsePanel::fetch_finnhub_earnings(qint64 gen, const QString& ticker) {
+    const QString key = services::bot::BotConfig::instance().finnhub_key();
+    if (key.isEmpty()) {
+        // Finnhub key not configured — leave EPS fields as "—". Snapshot
+        // / market cap / 52w still render from Polygon.
+        return;
+    }
+    auto* nam = finnhub_nam();
+    if (!nam) return;
+
+    QUrl url(QStringLiteral("https://finnhub.io/api/v1/stock/earnings"));
+    QUrlQuery q;
+    q.addQueryItem("symbol", ticker);
+    q.addQueryItem("limit",  "1");
+    q.addQueryItem("token",  key);
+    url.setQuery(q);
+
+    QNetworkRequest req(url);
+    req.setHeader(QNetworkRequest::UserAgentHeader, "Pinpunch/4.0.3 (TickerSearch)");
+    req.setAttribute(QNetworkRequest::Http2AllowedAttribute, true);
+
+    QNetworkReply* reply = nam->get(req);
+    QObject::connect(reply, &QNetworkReply::finished, this, [this, reply, gen]() {
+        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const QByteArray body = reply->readAll();
+        reply->deleteLater();
+        if (gen != current_search_gen_) return;
+        if (status >= 400) return;
+        QJsonParseError pe;
+        const QJsonDocument doc = QJsonDocument::fromJson(body, &pe);
+        if (pe.error != QJsonParseError::NoError) return;
+        // Finnhub returns an array directly: [{actual, estimate, period,
+        // quarter, surprise, surprisePercent, symbol, year}]
+        if (!doc.isArray()) return;
+        const QJsonArray arr = doc.array();
+        if (arr.isEmpty()) return;
+        const QJsonObject first = arr.first().toObject();
+        current_search_.eps_actual       = first.value("actual").toDouble();
+        current_search_.eps_estimate     = first.value("estimate").toDouble();
+        current_search_.eps_surprise_pct = first.value("surprisePercent").toDouble();
+        current_search_.eps_period       = first.value("period").toString();
+        current_search_.has_eps = true;
+        render_search_result();
+    });
+}
+
+void MarketPulsePanel::render_search_result() {
+    if (!sr_symbol_) return;
+    const auto& s = current_search_;
+
+    sr_symbol_->setText(s.ticker.isEmpty()
+        ? QStringLiteral("—")
+        : (s.name.isEmpty()
+            ? s.ticker
+            : QString("%1 — %2").arg(s.ticker, s.name)));
+
+    if (s.has_snapshot) {
+        const QColor chg_col = s.change_pct >= 0
+            ? QColor(ui::colors::POSITIVE())
+            : QColor(ui::colors::NEGATIVE());
+        sr_price_->setText(QString("%1   <span style='color:%2;'>%3</span>")
+                               .arg(format_price(s.current_price))
+                               .arg(chg_col.name())
+                               .arg(format_pct(s.change_pct)));
+        sr_price_->setTextFormat(Qt::RichText);
+        sr_day_range_->setText(QString("DAY  H %1   L %2")
+                                   .arg(format_price(s.day_high))
+                                   .arg(format_price(s.day_low)));
+    } else {
+        sr_price_->setText(QStringLiteral("—"));
+        sr_day_range_->setText(QStringLiteral("DAY  H —   L —"));
+    }
+
+    if (s.has_w52) {
+        sr_52w_range_->setText(QString("52W  H %1   L %2")
+                                   .arg(format_price(s.w52_high))
+                                   .arg(format_price(s.w52_low)));
+    } else {
+        sr_52w_range_->setText(QStringLiteral("52W  H —   L —"));
+    }
+
+    sr_mcap_->setText(QString("MCAP  %1").arg(s.has_details ? format_money(s.market_cap)
+                                                            : QStringLiteral("—")));
+
+    if (s.has_eps) {
+        sr_eps_actual_->setText(QString("EPS Actual    %1")
+                                    .arg(format_price(s.eps_actual, 2)));
+        sr_eps_est_->setText(QString("EPS Estimate  %1")
+                                 .arg(format_price(s.eps_estimate, 2)));
+        const double surp = s.eps_surprise_pct;
+        const QString verdict = (surp > 0.5)  ? "BEAT"
+                              : (surp < -0.5) ? "MISS"
+                                              : "INLINE";
+        const QColor surp_col = (surp > 0)  ? QColor(ui::colors::POSITIVE())
+                              : (surp < 0)  ? QColor(ui::colors::NEGATIVE())
+                                            : QColor(ui::colors::TEXT_SECONDARY());
+        sr_eps_surp_->setText(QString("Surprise      <span style='color:%1;'>%2 (%3)</span>")
+                                  .arg(surp_col.name())
+                                  .arg(format_pct(surp))
+                                  .arg(verdict));
+        sr_eps_surp_->setTextFormat(Qt::RichText);
+        sr_eps_date_->setText(QString("Period  %1").arg(s.eps_period.isEmpty() ? "—" : s.eps_period));
+    } else {
+        sr_eps_actual_->setText(QStringLiteral("EPS Actual    —"));
+        sr_eps_est_->setText(QStringLiteral("EPS Estimate  —"));
+        sr_eps_surp_->setText(QStringLiteral("Surprise      —"));
+        sr_eps_date_->setText(QStringLiteral("Period  —"));
+    }
 }
 
 } // namespace fincept::screens

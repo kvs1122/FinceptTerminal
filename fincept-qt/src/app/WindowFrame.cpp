@@ -1,4 +1,4 @@
-﻿#include "app/WindowFrame.h"
+#include "app/WindowFrame.h"
 
 #include "ai_chat/AiChatBubble.h"
 #include "ai_chat/AiChatScreen.h"
@@ -69,6 +69,7 @@
 #include "screens/node_editor/NodeEditorScreen.h"
 #include "screens/notes/NotesScreen.h"
 #include "screens/polymarket/PolymarketScreen.h"
+#include "screens/portfolio/AlpacaPortfolioScreen.h"
 #include "screens/portfolio/PortfolioScreen.h"
 #include "screens/profile/ProfileScreen.h"
 #include "screens/quantlib/QuantLibScreen.h"
@@ -170,7 +171,7 @@ WindowFrame::WindowFrame(int window_id, QWidget* parent, const WindowId& adopted
 
     // Show active profile in title bar when using a non-default profile
     const QString profile = ProfileManager::instance().active();
-    setWindowTitle(profile == "default" ? "Fincept Terminal" : QString("Fincept Terminal [%1]").arg(profile));
+    setWindowTitle(profile == "default" ? "Pinpunch Terminal" : QString("Pinpunch Terminal [%1]").arg(profile));
     // Load icon from the embedded Windows resource (IDI_ICON1 in app.rc).
     // Falls back to the .ico beside the executable on other platforms.
     QIcon app_icon;
@@ -698,8 +699,20 @@ WindowFrame::WindowFrame(int window_id, QWidget* parent, const WindowId& adopted
         }
     });
 
-    // Toolbar logout
-    connect(toolbar, &ui::ToolBar::logout_clicked, this, []() { auth::AuthManager::instance().logout(); });
+    // Toolbar EXIT button (renamed from LOGOUT — Pinpunch is local-only).
+    // Trigger the canonical Qt shutdown path: closing the top-level window
+    // sends QCloseEvent → fires QCoreApplication::aboutToQuit → all the
+    // qApp-parented QNetworkAccessManager teardowns run on the main event
+    // loop BEFORE worker threads are torn down, which is exactly the path
+    // the 2026-05-14 SIGSEGV-on-quit fix relies on. Bypassing window close
+    // (e.g. calling AuthManager::logout()) just hides the shell and leaves
+    // services running; the user wanted full app exit.
+    connect(toolbar, &ui::ToolBar::logout_clicked, this, [this]() {
+        if (auto* w = window())
+            w->close();
+        else
+            QCoreApplication::quit();
+    });
 
     // Toolbar plan label → pricing screen
     connect(toolbar, &ui::ToolBar::plan_clicked, this, [this]() {
@@ -776,55 +789,36 @@ WindowFrame::WindowFrame(int window_id, QWidget* parent, const WindowId& adopted
     // Show the app or auth stack based on authentication state.
     // If dock layout was restored, the saved tabs are already visible.
     // Otherwise, navigate to dashboard as default.
-    auto& auth_mgr = auth::AuthManager::instance();
-    if (auth_mgr.is_authenticated() || auth_mgr.is_loading()) {
-        // If user is authenticated and has a PIN, show lock screen first —
-        // UNLESS this is an additional window opened while an existing
-        // window has already cleared the PIN gate this session.
-        // pin_gate_cleared_ was bootstrapped above from the process-wide
-        // InactivityGuard flag (which is the single source of truth for
-        // "is the terminal locked?"); skipping the prompt here just
-        // mirrors the unlocked state into the new frame.
-        if (auth_mgr.is_authenticated() && auth::PinManager::instance().has_pin()
-            && !pin_gate_cleared_) {
-            LOG_INFO("WindowFrame", "Session restored — showing PIN unlock");
-            lock_screen_->show_unlock();
-            locked_ = true;
-            set_shell_visible(false);
-            stack_->setCurrentIndex(3);
-        } else if (auth_mgr.is_authenticated() && auth::PinManager::instance().has_pin()) {
-            LOG_INFO("WindowFrame",
-                     "Session already unlocked — skipping PIN prompt for additional window");
-            set_shell_visible(true);
-            stack_->setCurrentIndex(1);
-        } else if (auth_mgr.is_authenticated()) {
-            // Authenticated but no PIN yet — will be caught by on_auth_state_changed
-            on_auth_state_changed();
-        } else {
-            // Still loading — show app stack temporarily (loading state)
-            set_shell_visible(true);
-            stack_->setCurrentIndex(1);
-        }
-        if (!dock_restored) {
-            dock_router_->navigate("dashboard");
-            LOG_INFO("WindowFrame", "Applied clean default dock layout");
-        } else {
-            // Restore last-active screen as the focused tab and sync tab bar.
-            // Per-window key so multi-window users don't override each other.
-            const QString last = SessionManager::instance().last_screen(window_id_);
-            if (!last.isEmpty()) {
-                auto* dw = dock_router_->find_dock_widget(last);
-                if (dw && !dw->isClosed()) {
-                    dw->raise();
-                    dw->setAsCurrentTab();
-                }
-                tab_bar_->set_active(last);
-            }
-        }
-    } else {
-        on_auth_state_changed();
-    }
 
+    // ================================================
+    // PERSONAL BUILD OVERRIDE — 100% INDEPENDENT / OFFLINE
+    // No SIGN IN screen, no email, no password, no PIN lock, no Fincept server ever
+    // You now have a completely personal version.
+    // ================================================
+    LOG_INFO("WindowFrame", "PERSONAL BUILD: Forcing main terminal — skipping SIGN IN screen forever");
+
+    // Force everything into authenticated + unlocked state
+    set_shell_visible(true);
+    stack_->setCurrentIndex(1);           // main dock/app stack
+    locked_ = false;
+    pin_gate_cleared_ = true;
+
+    if (!dock_restored) {
+        dock_router_->navigate("dashboard");
+        LOG_INFO("WindowFrame", "Applied clean default dock layout");
+    } else {
+        // Restore last-active screen as the focused tab and sync tab bar.
+        // Per-window key so multi-window users don't override each other.
+        const QString last = SessionManager::instance().last_screen(window_id_);
+        if (!last.isEmpty()) {
+            auto* dw = dock_router_->find_dock_widget(last);
+            if (dw && !dw->isClosed()) {
+                dw->raise();
+                dw->setAsCurrentTab();
+            }
+            tab_bar_->set_active(last);
+        }
+    }
     // Periodic refresh of user credits/plan (every 3 minutes). Skip while
     // the terminal is locked — we shouldn't be making authenticated API
     // calls behind the back of the PIN gate, and the user can't see the
@@ -896,55 +890,27 @@ void WindowFrame::toggle_chat_mode() {
 }
 
 void WindowFrame::setup_auth_screens() {
-    auto* login = new screens::LoginScreen;
-    auto* reg = new screens::RegisterScreen;
-    auto* forgot = new screens::ForgotPasswordScreen;
-    auto* pricing = new screens::PricingScreen;
+    // ================================================
+    // PERSONAL BUILD OVERRIDE — 100% independent / offline
+    // Skips all auth screens to prevent PricingScreen crash
+    // ================================================
+    LOG_INFO("WindowFrame", "PERSONAL BUILD: Skipping all auth screens (no login, no pricing fetch)");
 
-    // Info screens stack (shared between auth and app via master stack index 2)
-    info_stack_ = new QStackedWidget;
-    auto* contact = new screens::ContactScreen;
-    auto* terms = new screens::TermsScreen;
-    auto* privacy = new screens::PrivacyScreen;
-    auto* trademarks = new screens::TrademarksScreen;
-    auto* help = new screens::HelpScreen;
+    auth_stack_ = new QStackedWidget(this);
 
-    info_stack_->addWidget(contact);    // index 0
-    info_stack_->addWidget(terms);      // index 1
-    info_stack_->addWidget(privacy);    // index 2
-    info_stack_->addWidget(trademarks); // index 3
-    info_stack_->addWidget(help);       // index 4
+    // ── Info screens only (harmless) ──
+    info_stack_ = new QStackedWidget(this);
+    auto* contact     = new screens::ContactScreen;
+    auto* terms       = new screens::TermsScreen;
+    auto* privacy     = new screens::PrivacyScreen;
+    auto* trademarks  = new screens::TrademarksScreen;
+    auto* help        = new screens::HelpScreen;
 
-    auth_stack_->addWidget(login);       // index 0
-    auth_stack_->addWidget(reg);         // index 1
-    auth_stack_->addWidget(forgot);      // index 2
-    auth_stack_->addWidget(pricing);     // index 3
-    auth_stack_->addWidget(info_stack_); // index 4
-
-    // ── Auth navigation ──────────────────────────────────────────────────────
-    connect(login, &screens::LoginScreen::navigate_register, this, &WindowFrame::show_register);
-    connect(login, &screens::LoginScreen::navigate_forgot_password, this, &WindowFrame::show_forgot_password);
-    connect(reg, &screens::RegisterScreen::navigate_login, this, &WindowFrame::show_login);
-    connect(forgot, &screens::ForgotPasswordScreen::navigate_login, this, &WindowFrame::show_login);
-    connect(pricing, &screens::PricingScreen::navigate_dashboard, this, [this]() {
-        set_shell_visible(true);
-        stack_->setCurrentIndex(1);
-        dock_router_->navigate("dashboard");
-    });
-
-    // ── Info screen navigation ───────────────────────────────────────────────
-    // Back from info → return to previous auth screen (login by default)
-    connect(contact, &screens::ContactScreen::navigate_back, this, &WindowFrame::show_login);
-    connect(terms, &screens::TermsScreen::navigate_back, this, &WindowFrame::show_login);
-    connect(terms, &screens::TermsScreen::navigate_privacy, this, &WindowFrame::show_info_privacy);
-    connect(terms, &screens::TermsScreen::navigate_contact, this, &WindowFrame::show_info_contact);
-    connect(privacy, &screens::PrivacyScreen::navigate_back, this, &WindowFrame::show_login);
-    connect(privacy, &screens::PrivacyScreen::navigate_terms, this, &WindowFrame::show_info_terms);
-    connect(privacy, &screens::PrivacyScreen::navigate_contact, this, &WindowFrame::show_info_contact);
-    connect(trademarks, &screens::TrademarksScreen::navigate_back, this, &WindowFrame::show_login);
-    connect(help, &screens::HelpScreen::navigate_back, this, &WindowFrame::show_login);
-    connect(help, &screens::HelpScreen::navigate_register, this, &WindowFrame::show_register);
-    connect(help, &screens::HelpScreen::navigate_forgot_password, this, &WindowFrame::show_forgot_password);
+    info_stack_->addWidget(contact);     // index 0
+    info_stack_->addWidget(terms);       // index 1
+    info_stack_->addWidget(privacy);     // index 2
+    info_stack_->addWidget(trademarks);  // index 3
+    info_stack_->addWidget(help);        // index 4
 }
 
 void WindowFrame::setup_docking_mode() {
@@ -1039,7 +1005,11 @@ void WindowFrame::setup_dock_screens() {
     dock_router_->register_factory("support", []() { return new screens::SupportScreen; });
     dock_router_->register_factory("notes", []() { return new screens::NotesScreen; });
 
-    dock_router_->register_factory("portfolio", []() { return new screens::PortfolioScreen; });
+    // Pinpunch portfolio = the operator's actual Alpaca paper account, not
+    // Fincept's hosted PortfolioScreen (which talks to api.fincept.in).
+    // AlpacaPortfolioScreen is a thin composition over BotPnLWidget +
+    // BotPositionsWidget — same data sources the dashboard uses.
+    dock_router_->register_factory("portfolio", []() { return new screens::AlpacaPortfolioScreen; });
     dock_router_->register_factory("ai_chat", []() { return new screens::AiChatScreen; });
     dock_router_->register_factory("backtesting", []() { return new screens::BacktestingScreen; });
     dock_router_->register_factory("algo_trading", []() { return new screens::AlgoTradingScreen; });
@@ -1428,13 +1398,13 @@ void WindowFrame::set_shell_visible(bool visible) {
     if (!visible) {
         // Reset title to plain app name — no screen suffix while on auth screens
         const QString profile = ProfileManager::instance().active();
-        setWindowTitle(profile == "default" ? "Fincept Terminal"
-                                            : QString("Fincept Terminal [%1]").arg(profile));
+        setWindowTitle(profile == "default" ? "Pinpunch Terminal"
+                                            : QString("Pinpunch Terminal [%1]").arg(profile));
     }
 }
 
 void WindowFrame::update_window_title() {
-    QString title = "Fincept Terminal";
+    QString title = "Pinpunch Terminal";
 
     const QString profile = ProfileManager::instance().active();
     if (profile != "default")

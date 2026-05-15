@@ -1,4 +1,5 @@
 #pragma once
+#include <QElapsedTimer>
 #include <QHideEvent>
 #include <QLineEdit>
 #include <QPushButton>
@@ -25,7 +26,13 @@ class TickerBar : public QWidget {
 
     void set_data(const QVector<Entry>& entries);
     void pause()  { scroll_timer_.stop(); }
-    void resume() { if (total_width_ > 0) scroll_timer_.start(); }
+    void resume() {
+        if (total_width_ > 0) {
+            last_advance_ms_ = elapsed_.elapsed();
+            pending_catchup_ = 0;
+            scroll_timer_.start();
+        }
+    }
 
     /// Returns the current symbol list (persisted user preference).
     QStringList symbols() const { return symbols_; }
@@ -51,8 +58,11 @@ class TickerBar : public QWidget {
     // ── Scrolling ──
     QVector<Entry> entries_;
     QTimer         scroll_timer_;
-    double         offset_      = 0;
-    int            total_width_ = 0;
+    QElapsedTimer  elapsed_;          // wall-clock anchor for time-based animation
+    qint64         last_advance_ms_ = 0;
+    double         offset_         = 0;
+    double         pending_catchup_ = 0;  // pixels deferred from a stuttered frame
+    int            total_width_     = 0;
 
     // ── Symbol list ──
     QStringList symbols_;

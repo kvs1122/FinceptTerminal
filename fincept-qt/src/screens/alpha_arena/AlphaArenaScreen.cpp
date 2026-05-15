@@ -419,7 +419,7 @@ void AlphaArenaScreen::on_live_mode_toggle_clicked() {
         return;
     }
     // Geofence (best-effort).
-#ifndef FINCEPT_UNSAFE_DISABLE_GEOFENCE
+#ifndef PINPUNCH_UNSAFE_DISABLE_GEOFENCE
     if (is_jurisdiction_blocked(QLocale::system().territory())) {
         QMessageBox::critical(this, tr("Alpha Arena"),
                               tr("Live mode is unavailable in your jurisdiction."));

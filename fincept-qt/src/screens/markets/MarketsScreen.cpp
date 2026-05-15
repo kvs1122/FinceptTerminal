@@ -59,9 +59,29 @@ MarketsScreen::MarketsScreen(QWidget* parent) : QWidget(parent) {
     refresh_timeout_->setInterval(kRefreshTimeoutMs);
     connect(refresh_timeout_, &QTimer::timeout, this, [this]() {
         if (!refresh_in_progress_) return;
-        refresh_in_progress_ = false;
-        pending_refreshes_   = 0;
-        if (status_label_) {
+        // Some panels still pending after the cold-start budget. Don't
+        // clobber their late-arrival hooks — leave refresh_in_progress_
+        // / pending_refreshes_ alone so each subsequent emit can still
+        // tick down and eventually flip the badge back to READY. Just
+        // soften the visible state: PARTIAL if any panel did finish,
+        // TIMEOUT if none did. The hub keeps publishing on its own
+        // schedule regardless of this label.
+        if (!status_label_) return;
+        const int finished = panels_.size() - pending_refreshes_;
+        if (finished > 0) {
+            status_label_->setText(QString("● PARTIAL  %1/%2").arg(finished).arg(panels_.size()));
+            status_label_->setStyleSheet(lbl_ss(ui::colors::AMBER(), true));
+            // Stamp the time so the user sees that data has actually
+            // arrived, even though one or more slow panels haven't fully
+            // hydrated yet. The hub keeps pushing per-symbol updates and
+            // the late-arrival hook above will flip badge → READY when
+            // the last panel finally finishes.
+            if (last_upd_label_) {
+                last_upd_label_->setText(QString("LAST UPDATE  %1")
+                    .arg(QDateTime::currentDateTime().toString("HH:mm:ss")));
+                last_upd_label_->setStyleSheet(lbl_ss(ui::colors::TEXT_SECONDARY(), false, 11));
+            }
+        } else {
             status_label_->setText("● TIMEOUT");
             status_label_->setStyleSheet(lbl_ss(ui::colors::NEGATIVE(), true));
         }
@@ -285,7 +305,7 @@ QWidget* MarketsScreen::build_header_bar() {
     };
 
     // Branding
-    auto* brand = new QLabel("FINCEPT MARKETS");
+    auto* brand = new QLabel("PINPUNCH MARKETS");
     brand->setStyleSheet(lbl_ss(ui::colors::TEXT_PRIMARY(), true));
     h->addWidget(brand);
 

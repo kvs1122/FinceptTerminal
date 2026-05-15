@@ -22,7 +22,13 @@ void AppConfig::remove(const QString& key) {
 }
 
 QString AppConfig::api_base_url() const {
-    return settings_.value("api/base_url", "https://api.fincept.in").toString();
+    // Pinpunch runs as a local-only operator console. The base URL is left
+    // empty by default so the shared HttpClient short-circuits any call to
+    // the Fincept-hosted account stack (login, MFA, profile, subscription,
+    // session-pulse all targeted https://api.fincept.in). If a user wants
+    // to point at a self-hosted compatible API they can set api/base_url
+    // explicitly via QSettings.
+    return settings_.value("api/base_url", "").toString();
 }
 
 bool AppConfig::dark_mode() const {

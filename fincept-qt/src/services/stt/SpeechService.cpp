@@ -82,7 +82,7 @@ class PythonSttProvider : public SttProvider {
         env.insert("PYTHONIOENCODING", "utf-8");
         env.insert("PYTHONDONTWRITEBYTECODE", "1");
         env.insert("PYTHONUNBUFFERED", "1");
-        env.insert("FINCEPT_DATA_DIR", python::PythonSetupManager::instance().install_dir());
+        env.insert("PINPUNCH_DATA_DIR", python::PythonSetupManager::instance().install_dir());
 
         const QString scripts_dir = python::PythonRunner::instance().scripts_dir();
         const QString existing_pypath = env.value("PYTHONPATH");
@@ -354,11 +354,11 @@ class DeepgramSttProvider final : public PythonSttProvider {
                           .arg(keyterms.length()).arg(gain, device));
 
         env.insert("DEEPGRAM_API_KEY", api_key);
-        env.insert("FINCEPT_STT_MODEL", model);
-        env.insert("FINCEPT_STT_LANGUAGE", lang);
-        env.insert("FINCEPT_STT_KEYTERMS", keyterms);
-        env.insert("FINCEPT_STT_GAIN", gain);
-        env.insert("FINCEPT_STT_DEVICE", device);
+        env.insert("PINPUNCH_STT_MODEL", model);
+        env.insert("PINPUNCH_STT_LANGUAGE", lang);
+        env.insert("PINPUNCH_STT_KEYTERMS", keyterms);
+        env.insert("PINPUNCH_STT_GAIN", gain);
+        env.insert("PINPUNCH_STT_DEVICE", device);
     }
 };
 

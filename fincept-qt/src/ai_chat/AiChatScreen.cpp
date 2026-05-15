@@ -1,4 +1,4 @@
-// AiChatScreen.cpp — Fincept AI Chat, Obsidian design system
+// AiChatScreen.cpp — Pinpunch AI Chat, Obsidian design system
 
 #include "ai_chat/AiChatScreen.h"
 
@@ -234,9 +234,17 @@ void AiChatScreen::build_ui() {
     auto* root = new QHBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
     root->setSpacing(0);
+    // Sidebar (sessions list, "+" new-session button, search box, rename/
+    // delete, footer model pill) is intentionally HIDDEN: the operator just
+    // wants a single persistent chat and was confused by sessions / the
+    // "+" button (which they read as "add model"). We still build_sidebar()
+    // so all the pointers exist (other code paths set styles, etc.) and
+    // hide it via setVisible(false) instead of skipping construction. The
+    // underlying single-session DB row keeps the chat history persistent
+    // across app launches.
     build_sidebar();
     build_chat_area();
-    root->addWidget(sidebar_);
+    sidebar_->setVisible(false);
     root->addWidget(chat_widget_, 1);
 }
 
@@ -267,7 +275,7 @@ void AiChatScreen::build_sidebar() {
     icon->setStyleSheet(QString("color:%1;font-size:22px;").arg(col::TEXT_PRIMARY()));
     hhl->addWidget(icon);
 
-    auto* title = new QLabel("Fincept AI");
+    auto* title = new QLabel("Pinpunch AI");
     title->setStyleSheet(QString("color:%1;font-size:%2px;font-weight:700;").arg(col::TEXT_PRIMARY()).arg(fnt::BODY));
     hhl->addWidget(title, 1);
 
@@ -451,8 +459,12 @@ QWidget* AiChatScreen::build_header_bar() {
     hdr_status_dot_->setStyleSheet(QString("background:%1;border-radius:0px;").arg(col::POSITIVE()));
     hl->addWidget(hdr_status_dot_);
 
-    // Session name
-    hdr_session_lbl_ = new QLabel("New Conversation");
+    // Static chat title — sidebar (with named sessions) is hidden in
+    // Pinpunch local-only mode, so the random "Apex Focus ABA7"-style
+    // session name was just visual noise. The label widget still exists
+    // because sidebar-rebind code paths setText on it; we just keep the
+    // string fixed.
+    hdr_session_lbl_ = new QLabel("Pinpunch AI");
     hdr_session_lbl_->setStyleSheet(
         QString("color:%1;font-size:%2px;font-weight:600;").arg(col::TEXT_PRIMARY()).arg(fnt::BODY));
     hl->addWidget(hdr_session_lbl_);
@@ -598,7 +610,7 @@ QWidget* AiChatScreen::build_input_area() {
     hl->setSpacing(10);
 
     input_box_ = new QPlainTextEdit;
-    input_box_->setPlaceholderText("Message Fincept AI...");
+    input_box_->setPlaceholderText("Message Pinpunch AI...");
     input_box_->setFixedHeight(44);
     input_box_->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     input_box_->setStyleSheet(QString("QPlainTextEdit{background:%1;color:%2;border:1px solid %3;"
@@ -789,7 +801,7 @@ void AiChatScreen::create_new_session() {
     total_messages_ = 0;
     clear_messages();
     load_sessions();
-    hdr_session_lbl_->setText(active_session_title_);
+    hdr_session_lbl_->setText("Pinpunch AI");  // sidebar hidden — show static brand
     delete_btn_->setEnabled(true);
     rename_btn_->setEnabled(true);
     update_stats();
@@ -830,7 +842,7 @@ void AiChatScreen::on_session_selected(int row) {
     active_session_title_ = item->text().split('\n').first();
     delete_btn_->setEnabled(true);
     rename_btn_->setEnabled(true);
-    hdr_session_lbl_->setText(active_session_title_);
+    hdr_session_lbl_->setText("Pinpunch AI");  // sidebar hidden — show static brand
     load_messages(active_session_id_);
     ScreenStateManager::instance().notify_changed(this);
 }
@@ -845,7 +857,7 @@ void AiChatScreen::on_rename_session() {
         return;
     ChatRepository::instance().update_session_title(active_session_id_, name.trimmed());
     active_session_title_ = name.trimmed();
-    hdr_session_lbl_->setText(active_session_title_);
+    hdr_session_lbl_->setText("Pinpunch AI");  // sidebar hidden — show static brand
     load_sessions();
 }
 
@@ -1139,12 +1151,11 @@ void AiChatScreen::set_input_enabled(bool enabled) {
 
 void AiChatScreen::update_stats() {
     // Header session name
-    if (!active_session_title_.isEmpty())
-        hdr_session_lbl_->setText(active_session_title_);
-    else if (!active_session_id_.isEmpty())
-        hdr_session_lbl_->setText(active_session_id_.left(8));
-    else
-        hdr_session_lbl_->setText("New Conversation");
+    // Sidebar hidden — header always shows the static brand. The session
+    // selector / title-update logic the sidebar used to drive isn't reachable.
+    hdr_session_lbl_->setText("Pinpunch AI");
+    Q_UNUSED(active_session_title_);
+    Q_UNUSED(active_session_id_);
 
     // Token count in header
     if (total_tokens_ > 0) {
@@ -1157,14 +1168,14 @@ void AiChatScreen::update_stats() {
     auto& llm = ai_chat::LlmService::instance();
     if (llm.is_configured()) {
         const QString provider_raw = llm.active_provider();
-        const bool is_fincept = (provider_raw.toLower() == "fincept");
-
-        // Display names
-        const QString prov_display = is_fincept ? "Fincept LLM" : provider_raw.toUpper();
-        const QString model_raw = llm.active_model();
-        // For fincept, don't expose internal model name
-        const QString model_display = is_fincept ? "Fincept LLM" : model_raw;
-        QString model_short = model_display;
+        // Pinpunch is local-only — the "fincept" provider talks to a
+        // hosted backend at api.fincept.in and is not available here.
+        // Display whatever the user actually configured (Grok, Cerebras,
+        // OpenAI, Anthropic, Gemini, Ollama, etc.) directly. No more
+        // "Fincept LLM" / "Managed by Fincept" branding strings.
+        const QString prov_display = provider_raw.toUpper();
+        const QString model_raw    = llm.active_model();
+        QString model_short = model_raw;
         if (model_short.length() > 24)
             model_short = model_short.left(22) + "..";
 
@@ -1172,19 +1183,14 @@ void AiChatScreen::update_stats() {
         provider_lbl_->setText(prov_display);
         provider_lbl_->setStyleSheet(
             QString("color:%1;font-size:%2px;font-weight:600;").arg(col::AMBER()).arg(fnt::SMALL));
-        model_lbl_->setText(is_fincept ? "Managed by Fincept" : model_short);
-        model_lbl_->setToolTip(is_fincept ? "Fincept LLM — managed AI service" : model_raw);
+        model_lbl_->setText(model_short);
+        model_lbl_->setToolTip(model_raw);
         model_lbl_->setStyleSheet(QString("color:%1;font-size:%2px;").arg(col::TEXT_SECONDARY()).arg(fnt::TINY));
 
         // Header model pill — show "Provider / Model" for clarity
-        if (is_fincept) {
-            hdr_model_lbl_->setText("Fincept LLM");
-            hdr_model_lbl_->setToolTip("Fincept managed AI service\n\nChange in Settings > LLM Configuration");
-        } else {
-            hdr_model_lbl_->setText(provider_raw.left(1).toUpper() + provider_raw.mid(1) + " / " + model_short);
-            hdr_model_lbl_->setToolTip("Provider: " + prov_display + "\nModel: " + model_raw +
-                                       "\n\nChange in Settings > LLM Configuration");
-        }
+        hdr_model_lbl_->setText(provider_raw.left(1).toUpper() + provider_raw.mid(1) + " / " + model_short);
+        hdr_model_lbl_->setToolTip("Provider: " + prov_display + "\nModel: " + model_raw +
+                                   "\n\nChange in Settings > LLM Configuration");
     } else {
         provider_lbl_->setText("No provider");
         provider_lbl_->setStyleSheet(

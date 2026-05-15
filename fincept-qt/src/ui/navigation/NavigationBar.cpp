@@ -22,7 +22,7 @@ NavigationBar::NavigationBar(QWidget* parent) : QWidget(parent) {
         return l;
     };
 
-    hl->addWidget(mk("FINCEPT", "navBrand"));
+    hl->addWidget(mk("PINPUNCH", "navBrand"));
     hl->addWidget(mk("TERMINAL", "navTitle"));
     hl->addWidget(mk("   ", "navSpacer"));
     hl->addWidget(mk("\xe2\x97\x8f", "navLiveDot"));
@@ -41,10 +41,14 @@ NavigationBar::NavigationBar(QWidget* parent) : QWidget(parent) {
     hl->addWidget(plan_label_);
     hl->addWidget(mk("  |  ", "navSep"));
 
-    logout_btn_ = new QPushButton("LOGOUT");
+    // Renamed from LOGOUT — Pinpunch is local-only, no Fincept session to
+    // terminate. Click triggers a clean app shutdown via WindowFrame's
+    // rewired logout_clicked handler.
+    logout_btn_ = new QPushButton("EXIT");
     logout_btn_->setFixedHeight(24);
     logout_btn_->setCursor(Qt::PointingHandCursor);
     logout_btn_->setObjectName("navLogout");
+    logout_btn_->setToolTip("Quit Pinpunch Terminal");
     connect(logout_btn_, &QPushButton::clicked, this, &NavigationBar::logout_clicked);
     hl->addWidget(logout_btn_);
 

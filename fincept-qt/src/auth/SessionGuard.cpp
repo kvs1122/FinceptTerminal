@@ -3,6 +3,7 @@
 #include "auth/AuthApi.h"
 #include "auth/AuthManager.h"
 #include "auth/InactivityGuard.h"
+#include "core/config/AppConfig.h"
 #include "core/logging/Logger.h"
 
 namespace fincept::auth {
@@ -25,6 +26,14 @@ SessionGuard::SessionGuard(QObject* parent) : QObject(parent) {
 void SessionGuard::start() {
     if (timer_.isActive())
         return;
+    // Pinpunch local-only mode: when no Fincept-hosted API is configured
+    // (api/base_url empty — see AppConfig::api_base_url), the session-pulse
+    // endpoint has nowhere to go. Skip starting the guard entirely so we
+    // don't fire failing pulses or trigger spurious 401-driven logouts.
+    if (AppConfig::instance().api_base_url().isEmpty()) {
+        LOG_INFO("SessionGuard", "api_base_url empty — session pulse disabled (local-only mode)");
+        return;
+    }
     // Do NOT pulse synchronously here. On startup the PIN gate routes the
     // user to the lock screen via auth_state_changed; firing a pulse on
     // the same signal raced ahead and could log the user out (via stale

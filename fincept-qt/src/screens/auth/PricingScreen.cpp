@@ -80,7 +80,7 @@ void PricingScreen::build_ui() {
                              .arg(MF));
     vl->addWidget(title);
 
-    auto* subtitle = new QLabel("Unlock the full power of Fincept Terminal");
+    auto* subtitle = new QLabel("Unlock the full power of Pinpunch Terminal");
     subtitle->setAlignment(Qt::AlignCenter);
     subtitle->setStyleSheet(
         QString("color: %1; font-size: 13px; background: transparent; %2").arg(ui::colors::TEXT_TERTIARY()).arg(MF));

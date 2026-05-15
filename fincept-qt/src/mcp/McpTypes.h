@@ -383,6 +383,6 @@ struct UnifiedTool {
 // ============================================================================
 
 inline constexpr const char* INTERNAL_SERVER_ID = "fincept-terminal";
-inline constexpr const char* INTERNAL_SERVER_NAME = "Fincept Terminal";
+inline constexpr const char* INTERNAL_SERVER_NAME = "Pinpunch Terminal";
 
 } // namespace fincept::mcp

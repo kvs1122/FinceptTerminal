@@ -17,11 +17,15 @@ TabBar::TabBar(QWidget* parent) : QWidget(parent) {
     tab_layout_->setContentsMargins(4, 0, 4, 0);
     tab_layout_->setSpacing(2);
 
+    // Pinpunch is a fully-local trading-bot operator console — Profile and
+    // Forum are dropped because both screens phone home to api.fincept.in
+    // (user account / forum posts), which violates the local-only intent.
+    // Settings remains so the operator can manage local credentials.
     QVector<TabDef> tabs = {
         {"dashboard", "DASHBOARD"}, {"markets", "MARKETS"},   {"crypto_trading", "CRYPTO"},  {"portfolio", "PORTFOLIO"},
         {"news", "NEWS"},           {"ai_chat", "AI CHAT"},   {"backtesting", "BACKTEST"},   {"algo_trading", "ALGO"},
         {"node_editor", "NODES"},   {"code_editor", "CODE"},  {"ai_quant_lab", "QUANT LAB"}, {"quantlib", "QUANTLIB"},
-        {"forum", "FORUM"},         {"settings", "SETTINGS"}, {"profile", "PROFILE"},
+        {"settings", "SETTINGS"},
     };
     for (const auto& def : tabs)
         add_tab(def);

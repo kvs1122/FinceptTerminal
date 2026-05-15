@@ -52,7 +52,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 # ── Pinned toolchain enforcement ─────────────────────────────────────────────
-# Fincept Terminal ships on 3 platforms and cannot tolerate compiler-version
+# Pinpunch Terminal ships on 3 platforms and cannot tolerate compiler-version
 # drift. These checks fail the build early with an actionable message rather
 # than letting the user hit a cryptic template error 10 minutes into compile.
 if(MSVC AND MSVC_VERSION LESS 1938)
@@ -84,8 +84,8 @@ endif()
 # launcher script) and at build time (when the launcher actually runs),
 # so we wrap ccache in a CMake-generated script that exports the env vars
 # unconditionally.
-find_program(FINCEPT_CCACHE_PROGRAM NAMES ccache sccache)
-if(FINCEPT_CCACHE_PROGRAM)
+find_program(PINPUNCH_CCACHE_PROGRAM NAMES ccache sccache)
+if(PINPUNCH_CCACHE_PROGRAM)
     # Expose the same env vars to interactive `ccache -s` runs by writing a
     # ccache.conf in the cache dir. This is idempotent — ccache reads it on
     # every invocation, so changes here propagate without a clean rebuild.
@@ -119,7 +119,7 @@ if(FINCEPT_CCACHE_PROGRAM)
             "set CCACHE_PCH_EXTSUM=true\r\n"
             "set CCACHE_DEPEND=1\r\n"
             "set CCACHE_COMPILERCHECK=content\r\n"
-            "\"${FINCEPT_CCACHE_PROGRAM}\" %*\r\n")
+            "\"${PINPUNCH_CCACHE_PROGRAM}\" %*\r\n")
     else()
         set(_fincept_ccache_launcher "${CMAKE_BINARY_DIR}/ccache_launcher.sh")
         file(WRITE "${_fincept_ccache_launcher}"
@@ -128,13 +128,13 @@ if(FINCEPT_CCACHE_PROGRAM)
             "export CCACHE_PCH_EXTSUM=true\n"
             "export CCACHE_DEPEND=1\n"
             "export CCACHE_COMPILERCHECK=content\n"
-            "exec \"${FINCEPT_CCACHE_PROGRAM}\" \"$@\"\n")
+            "exec \"${PINPUNCH_CCACHE_PROGRAM}\" \"$@\"\n")
         execute_process(COMMAND chmod +x "${_fincept_ccache_launcher}")
     endif()
 
     set(CMAKE_CXX_COMPILER_LAUNCHER "${_fincept_ccache_launcher}")
     set(CMAKE_C_COMPILER_LAUNCHER   "${_fincept_ccache_launcher}")
-    message(STATUS "Compiler cache enabled: ${FINCEPT_CCACHE_PROGRAM} (PCH-aware launcher)")
+    message(STATUS "Compiler cache enabled: ${PINPUNCH_CCACHE_PROGRAM} (PCH-aware launcher)")
 endif()
 
 # ── macOS rpath configuration ────────────────────────────────────────────────
@@ -147,7 +147,7 @@ if(APPLE)
     # produce bundles that require that newer host OS at runtime.
     if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET OR CMAKE_OSX_DEPLOYMENT_TARGET STREQUAL "")
         set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING
-            "Minimum macOS version supported by Fincept Terminal" FORCE)
+            "Minimum macOS version supported by Pinpunch Terminal" FORCE)
     endif()
     set(CMAKE_MACOSX_RPATH ON)
     set(CMAKE_INSTALL_RPATH "@executable_path/../Frameworks;@executable_path/../lib")
@@ -180,11 +180,11 @@ set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE BOOL "Skip FetchContent update st
 # link a full whole-program rebuild over 400+ object files — easily 30-90s per
 # link on a developer machine. Default OFF so daily iteration is fast; CI and
 # explicit release builds opt in.
-option(FINCEPT_ENABLE_LTO
+option(PINPUNCH_ENABLE_LTO
     "Enable MSVC /GL + /LTCG and equivalent on GCC/Clang (slow link, smaller/faster binary)"
     OFF)
 if(DEFINED ENV{CI})
-    set(FINCEPT_ENABLE_LTO ON CACHE BOOL "" FORCE)
+    set(PINPUNCH_ENABLE_LTO ON CACHE BOOL "" FORCE)
 endif()
 
 # MSVC compiler flags for maximum build throughput:
@@ -216,9 +216,9 @@ if(MSVC)
 
     # Whole-program optimisation. /GL marks each .obj as IL; /LTCG merges at
     # link time. Both required together — using one without the other warns
-    # and silently disables. Gated behind FINCEPT_ENABLE_LTO so incremental
+    # and silently disables. Gated behind PINPUNCH_ENABLE_LTO so incremental
     # dev links stay fast (incremental linking is incompatible with /LTCG).
-    if(FINCEPT_ENABLE_LTO)
+    if(PINPUNCH_ENABLE_LTO)
         add_compile_options($<$<CONFIG:Release>:/GL>)
         add_link_options($<$<CONFIG:Release>:/LTCG:incremental>)
     else()
@@ -256,19 +256,19 @@ add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
 
 # ── Test suite (opt-in) ──────────────────────────────────────────────────────
 # OFF by default so a normal build is unchanged. Turn on with
-# -DFINCEPT_BUILD_TESTS=ON to compile the Qt Test executables under
+# -DPINPUNCH_BUILD_TESTS=ON to compile the Qt Test executables under
 # fincept-qt/tests/. Run via `ctest` in the build directory.
-option(FINCEPT_BUILD_TESTS "Build the Fincept Terminal test suite" OFF)
+option(PINPUNCH_BUILD_TESTS "Build the Pinpunch Terminal test suite" OFF)
 
 # ── Alpha Arena live-mode geofencing ─────────────────────────────────────────
 # Live mode is gated by best-effort locale detection in AlphaArenaScreen.
 # A handful of jurisdictions (US, NK, IR, …) are blocked. This flag exists
 # *only* for development on machines that report a blocked locale; release
 # builds must leave it OFF.
-option(FINCEPT_UNSAFE_DISABLE_GEOFENCE
+option(PINPUNCH_UNSAFE_DISABLE_GEOFENCE
        "Alpha Arena: disable live-mode geofence (DEV ONLY)" OFF)
-if(FINCEPT_UNSAFE_DISABLE_GEOFENCE)
-    add_compile_definitions(FINCEPT_UNSAFE_DISABLE_GEOFENCE=1)
+if(PINPUNCH_UNSAFE_DISABLE_GEOFENCE)
+    add_compile_definitions(PINPUNCH_UNSAFE_DISABLE_GEOFENCE=1)
     message(WARNING "Alpha Arena: geofence DISABLED — do not ship this build.")
 endif()
 
@@ -277,24 +277,24 @@ endif()
 # exactly the documented version to guarantee binary/ABI stability of the
 # installer. Local development can tolerate patch drift.
 #
-# Pin modes (set via -DFINCEPT_QT_PIN_MODE=...):
+# Pin modes (set via -DPINPUNCH_QT_PIN_MODE=...):
 #   EXACT  — require 6.8.3 exactly. Use for CI / release builds.
 #   MINOR  — require 6.8.x (any patch). Default for developer builds — lets
 #            "qt maintenance tool" patch updates work without breaking config.
 #   ANY    — accept any Qt6 found on the system. Local experimentation only.
 #
-# Legacy FINCEPT_ALLOW_QT_DRIFT=ON is honoured and maps to ANY for back-compat.
-set(FINCEPT_QT_VERSION 6.8.3)
-set(FINCEPT_QT_VERSION_MINOR 6.8)
-set(FINCEPT_QT_PIN_MODE "MINOR" CACHE STRING "Qt version pin mode: EXACT|MINOR|ANY")
-set_property(CACHE FINCEPT_QT_PIN_MODE PROPERTY STRINGS EXACT MINOR ANY)
-if(FINCEPT_ALLOW_QT_DRIFT)
-    set(FINCEPT_QT_PIN_MODE "ANY")
+# Legacy PINPUNCH_ALLOW_QT_DRIFT=ON is honoured and maps to ANY for back-compat.
+set(PINPUNCH_QT_VERSION 6.8.3)
+set(PINPUNCH_QT_VERSION_MINOR 6.8)
+set(PINPUNCH_QT_PIN_MODE "MINOR" CACHE STRING "Qt version pin mode: EXACT|MINOR|ANY")
+set_property(CACHE PINPUNCH_QT_PIN_MODE PROPERTY STRINGS EXACT MINOR ANY)
+if(PINPUNCH_ALLOW_QT_DRIFT)
+    set(PINPUNCH_QT_PIN_MODE "ANY")
 endif()
 # Force EXACT for tagged release builds.
-if(FINCEPT_RELEASE_BUILD)
-    set(FINCEPT_QT_PIN_MODE "EXACT")
-    message(STATUS "FINCEPT_RELEASE_BUILD=ON → forcing Qt pin mode to EXACT (${FINCEPT_QT_VERSION})")
+if(PINPUNCH_RELEASE_BUILD)
+    set(PINPUNCH_QT_PIN_MODE "EXACT")
+    message(STATUS "PINPUNCH_RELEASE_BUILD=ON → forcing Qt pin mode to EXACT (${PINPUNCH_QT_VERSION})")
 endif()
 
 # Qt 6.8 FindWrapOpenGL.cmake hard-codes "-framework AGL" as a fallback when
@@ -318,32 +318,32 @@ if(APPLE AND NOT TARGET WrapOpenGL::WrapOpenGL)
 endif()
 
 # Build the version arg list once based on pin mode, then reuse it.
-if(FINCEPT_QT_PIN_MODE STREQUAL "EXACT")
-    set(_FINCEPT_QT_VER_ARGS ${FINCEPT_QT_VERSION} EXACT)
-elseif(FINCEPT_QT_PIN_MODE STREQUAL "MINOR")
-    set(_FINCEPT_QT_VER_ARGS ${FINCEPT_QT_VERSION_MINOR})  # any 6.8.x
+if(PINPUNCH_QT_PIN_MODE STREQUAL "EXACT")
+    set(_PINPUNCH_QT_VER_ARGS ${PINPUNCH_QT_VERSION} EXACT)
+elseif(PINPUNCH_QT_PIN_MODE STREQUAL "MINOR")
+    set(_PINPUNCH_QT_VER_ARGS ${PINPUNCH_QT_VERSION_MINOR})  # any 6.8.x
 else()
-    set(_FINCEPT_QT_VER_ARGS "")  # ANY: no version constraint
+    set(_PINPUNCH_QT_VER_ARGS "")  # ANY: no version constraint
 endif()
 
-find_package(Qt6 ${_FINCEPT_QT_VER_ARGS} REQUIRED COMPONENTS
+find_package(Qt6 ${_PINPUNCH_QT_VER_ARGS} REQUIRED COMPONENTS
     Widgets Charts PrintSupport Network Sql Concurrent Multimedia)
 
 # Optional: WebSockets (not always installed)
-find_package(Qt6 ${_FINCEPT_QT_VER_ARGS} QUIET COMPONENTS WebSockets)
+find_package(Qt6 ${_PINPUNCH_QT_VER_ARGS} QUIET COMPONENTS WebSockets)
 if(Qt6WebSockets_FOUND)
     set(HAS_WEBSOCKETS TRUE)
 endif()
 
 # Optional: MultimediaWidgets (for inline video/stream playback)
 # Qt6::Multimedia is already required above (needed for QMediaPlayer in AiChatBubble / VideoPlayerWidget).
-find_package(Qt6 ${_FINCEPT_QT_VER_ARGS} QUIET COMPONENTS MultimediaWidgets)
+find_package(Qt6 ${_PINPUNCH_QT_VER_ARGS} QUIET COMPONENTS MultimediaWidgets)
 if(Qt6MultimediaWidgets_FOUND)
     set(HAS_MULTIMEDIA TRUE)
 endif()
 
 # Optional: TextToSpeech (cross-platform TTS — SAPI/AVSpeech/speech-dispatcher)
-find_package(Qt6 ${_FINCEPT_QT_VER_ARGS} QUIET COMPONENTS TextToSpeech)
+find_package(Qt6 ${_PINPUNCH_QT_VER_ARGS} QUIET COMPONENTS TextToSpeech)
 if(Qt6TextToSpeech_FOUND)
     set(HAS_TTS TRUE)
 endif()
@@ -353,7 +353,7 @@ endif()
 # fractional-scale Fedora/Ubuntu sessions) or fail outright on pure-Wayland
 # compositors. Detection only; install rule is below in the Linux block.
 if(UNIX AND NOT APPLE)
-    find_package(Qt6 ${_FINCEPT_QT_VER_ARGS} QUIET COMPONENTS WaylandClient)
+    find_package(Qt6 ${_PINPUNCH_QT_VER_ARGS} QUIET COMPONENTS WaylandClient)
     if(Qt6WaylandClient_FOUND)
         set(HAS_WAYLAND TRUE)
     endif()
@@ -399,9 +399,9 @@ set(CMAKE_SKIP_INSTALL_RULES TRUE CACHE BOOL "" FORCE)
 # When private headers are absent, QXlsx is disabled and Excel export shows
 # a "not available" message rather than crashing or failing to build.
 if(TARGET Qt6::GuiPrivate)
-    set(FINCEPT_HAS_PRIVATE_HEADERS TRUE)
+    set(PINPUNCH_HAS_PRIVATE_HEADERS TRUE)
 else()
-    set(FINCEPT_HAS_PRIVATE_HEADERS FALSE)
+    set(PINPUNCH_HAS_PRIVATE_HEADERS FALSE)
     message(WARNING
         "\n"
         "  Qt6::GuiPrivate not found — Excel export (QXlsx) will be disabled.\n"
@@ -418,7 +418,7 @@ endif()
 # Only fetched and built when Qt6::GuiPrivate is available.
 # A stub INTERFACE target is created when unavailable so all
 # target_link_libraries(... QXlsx::QXlsx) calls still compile cleanly.
-if(FINCEPT_HAS_PRIVATE_HEADERS)
+if(PINPUNCH_HAS_PRIVATE_HEADERS)
     FetchContent_Declare(
         QXlsx
         GIT_REPOSITORY https://github.com/QtExcel/QXlsx.git
@@ -452,7 +452,7 @@ else()
     add_library(QXlsx_stub INTERFACE)
     add_library(QXlsx::QXlsx ALIAS QXlsx_stub)
 endif()
-# NOTE: FINCEPT_HAS_QXLSX compile definition is applied to FinceptTerminal
+# NOTE: PINPUNCH_HAS_QXLSX compile definition is applied to FinceptTerminal
 # after add_executable() — see the target_compile_definitions block below.
 
 # ── Auto-update service ─────────────────────────────────────────────────────
@@ -592,8 +592,8 @@ FetchContent_Declare(
     UPDATE_DISCONNECTED TRUE
 )
 FetchContent_MakeAvailable(ed25519)
-file(GLOB FINCEPT_ED25519_SRC "${ed25519_SOURCE_DIR}/src/*.c")
-add_library(fincept_ed25519 STATIC ${FINCEPT_ED25519_SRC})
+file(GLOB PINPUNCH_ED25519_SRC "${ed25519_SOURCE_DIR}/src/*.c")
+add_library(fincept_ed25519 STATIC ${PINPUNCH_ED25519_SRC})
 target_include_directories(fincept_ed25519 PUBLIC "${ed25519_SOURCE_DIR}/src")
 set_target_properties(fincept_ed25519 PROPERTIES
     UNITY_BUILD OFF
@@ -920,6 +920,12 @@ set(SERVICE_SOURCES
     src/services/options/StrategyAnalytics.cpp
     src/services/options/FiiDiiService.cpp
     src/services/data_normalization/DataNormalizationService.cpp
+    # ── Pinpunch ↔ grok-claude bot integration (sibling consumer of bot data) ──
+    src/services/bot/BotService.cpp
+    src/services/bot/AlpacaRestClient.cpp
+    src/services/bot/PolygonRestClient.cpp
+    src/services/bot/BotEconCalendarService.cpp
+    src/services/bot/BotIndicesService.cpp
     src/services/news/NewsService.cpp
     src/services/news/NewsClusterService.cpp
     src/services/news/NewsMonitorService.cpp
@@ -1184,6 +1190,10 @@ set(SCREEN_SOURCES
     src/screens/dashboard/widgets/CryptoTickerWidget.cpp
     src/screens/dashboard/widgets/PolymarketPriceWidget.cpp
     src/screens/dashboard/widgets/AgentErrorsWidget.cpp
+    # ── Pinpunch ↔ grok-claude bot widgets ──
+    src/screens/dashboard/widgets/BotPositionsWidget.cpp
+    src/screens/dashboard/widgets/BotPnLWidget.cpp
+    src/screens/dashboard/widgets/BotWatchlistWidget.cpp
     src/screens/dashboard/widgets/SparklineStripWidget.cpp
     src/screens/dashboard/widgets/TradeTapeWidget.cpp
     src/screens/dashboard/widgets/NewsCategoryWidget.cpp
@@ -1444,6 +1454,7 @@ set(SCREEN_SOURCES
     src/screens/equity_research/EquitySentimentTab.cpp
 
     # Portfolio
+    src/screens/portfolio/AlpacaPortfolioScreen.cpp
     src/screens/portfolio/PortfolioScreen.cpp
     src/screens/portfolio/PortfolioCommandBar.cpp
     src/screens/portfolio/PortfolioStatsRibbon.cpp
@@ -1789,6 +1800,7 @@ set_source_files_properties(
     src/screens/node_editor/toolbar/DeployDialog.cpp
     src/screens/node_editor/toolbar/NodeEditorToolbar.cpp
     src/screens/notes/NotesScreen.cpp
+    src/screens/portfolio/AlpacaPortfolioScreen.cpp
     src/screens/portfolio/PortfolioInsightsPanel.cpp
     src/screens/portfolio/PortfolioBlotter.cpp
     src/screens/portfolio/PortfolioCommandBar.cpp
@@ -2053,15 +2065,15 @@ set_source_files_properties(
 # WIN32     — suppress console window on Windows
 # MACOSX_BUNDLE — create a proper .app bundle on macOS
 if(WIN32)
-    set(_FINCEPT_EXE_FLAGS WIN32)
+    set(_PINPUNCH_EXE_FLAGS WIN32)
     # Generate app.rc from app.rc.in so FILEVERSION / PRODUCTVERSION / string
     # table reflect the project() VERSION. Without this the exe's PE version
     # resource is 0.0.0.0 and Windows Error Reporting cannot triage crashes
     # by app version (see issue #215). The .ico reference is relative to the
     # generated file's directory, so copy fincept.ico next to it.
-    set(FINCEPT_VER_MAJOR ${PROJECT_VERSION_MAJOR})
-    set(FINCEPT_VER_MINOR ${PROJECT_VERSION_MINOR})
-    set(FINCEPT_VER_PATCH ${PROJECT_VERSION_PATCH})
+    set(PINPUNCH_VER_MAJOR ${PROJECT_VERSION_MAJOR})
+    set(PINPUNCH_VER_MINOR ${PROJECT_VERSION_MINOR})
+    set(PINPUNCH_VER_PATCH ${PROJECT_VERSION_PATCH})
     configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/resources/app.rc.in"
         "${CMAKE_CURRENT_BINARY_DIR}/app.rc"
@@ -2070,16 +2082,16 @@ if(WIN32)
         "${CMAKE_CURRENT_SOURCE_DIR}/resources/fincept.ico"
         "${CMAKE_CURRENT_BINARY_DIR}/fincept.ico"
         COPYONLY)
-    set(_FINCEPT_PLATFORM_SOURCES "${CMAKE_CURRENT_BINARY_DIR}/app.rc")
+    set(_PINPUNCH_PLATFORM_SOURCES "${CMAKE_CURRENT_BINARY_DIR}/app.rc")
 elseif(APPLE)
-    set(_FINCEPT_EXE_FLAGS MACOSX_BUNDLE)
-    set(_FINCEPT_PLATFORM_SOURCES "")
+    set(_PINPUNCH_EXE_FLAGS MACOSX_BUNDLE)
+    set(_PINPUNCH_PLATFORM_SOURCES "")
 else()
-    set(_FINCEPT_EXE_FLAGS "")
-    set(_FINCEPT_PLATFORM_SOURCES "")
+    set(_PINPUNCH_EXE_FLAGS "")
+    set(_PINPUNCH_PLATFORM_SOURCES "")
 endif()
 
-add_executable(FinceptTerminal ${_FINCEPT_EXE_FLAGS}
+add_executable(FinceptTerminal ${_PINPUNCH_EXE_FLAGS}
     ${CORE_SOURCES}
     ${NETWORK_SOURCES}
     ${DATAHUB_SOURCES}
@@ -2094,7 +2106,7 @@ add_executable(FinceptTerminal ${_FINCEPT_EXE_FLAGS}
     ${SCREEN_SOURCES}
     ${APP_SOURCES}
     src/services/updater/UpdateService.cpp
-    ${_FINCEPT_PLATFORM_SOURCES}
+    ${_PINPUNCH_PLATFORM_SOURCES}
 )
 
 target_include_directories(FinceptTerminal PRIVATE
@@ -2105,20 +2117,20 @@ target_include_directories(FinceptTerminal PRIVATE
 if(APPLE)
     set_target_properties(FinceptTerminal PROPERTIES
         MACOSX_BUNDLE_GUI_IDENTIFIER    "com.fincept.terminal"
-        MACOSX_BUNDLE_BUNDLE_NAME       "Fincept Terminal"
+        MACOSX_BUNDLE_BUNDLE_NAME       "Pinpunch Terminal"
         MACOSX_BUNDLE_BUNDLE_VERSION    "${CMAKE_PROJECT_VERSION}"
         MACOSX_BUNDLE_SHORT_VERSION_STRING "${CMAKE_PROJECT_VERSION}"
         MACOSX_BUNDLE_ICON_FILE         "fincept.icns"
         MACOSX_BUNDLE_COPYRIGHT         "Copyright © 2025 Fincept Corporation"
     )
     # Copy .icns into the bundle Resources folder at build time
-    set(_FINCEPT_ICNS "${CMAKE_CURRENT_SOURCE_DIR}/resources/fincept.icns")
-    if(EXISTS "${_FINCEPT_ICNS}")
-        target_sources(FinceptTerminal PRIVATE "${_FINCEPT_ICNS}")
-        set_source_files_properties("${_FINCEPT_ICNS}"
+    set(_PINPUNCH_ICNS "${CMAKE_CURRENT_SOURCE_DIR}/resources/fincept.icns")
+    if(EXISTS "${_PINPUNCH_ICNS}")
+        target_sources(FinceptTerminal PRIVATE "${_PINPUNCH_ICNS}")
+        set_source_files_properties("${_PINPUNCH_ICNS}"
             PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
     else()
-        message(WARNING "macOS icon not found at ${_FINCEPT_ICNS} — app will show generic icon. "
+        message(WARNING "macOS icon not found at ${_PINPUNCH_ICNS} — app will show generic icon. "
                         "Generate it with: iconutil -c icns -o resources/fincept.icns <iconset>")
     endif()
 endif()
@@ -2433,14 +2445,14 @@ if(WIN32)
 endif()
 
 # ── Application version (single source of truth) ─────────────────────────────
-# FINCEPT_VERSION_STRING is consumed by main.cpp so QApplication::applicationVersion()
+# PINPUNCH_VERSION_STRING is consumed by main.cpp so QApplication::applicationVersion()
 # always matches the project() VERSION declared at the top of this file.
 target_compile_definitions(FinceptTerminal PRIVATE
-    FINCEPT_VERSION_STRING="${CMAKE_PROJECT_VERSION}")
+    PINPUNCH_VERSION_STRING="${CMAKE_PROJECT_VERSION}")
 
 # ── Optional feature compile definitions (applied after add_executable) ──────
-if(FINCEPT_HAS_PRIVATE_HEADERS)
-    target_compile_definitions(FinceptTerminal PRIVATE FINCEPT_HAS_QXLSX)
+if(PINPUNCH_HAS_PRIVATE_HEADERS)
+    target_compile_definitions(FinceptTerminal PRIVATE PINPUNCH_HAS_QXLSX)
 endif()
 
 if(HAS_WEBSOCKETS)
@@ -2499,23 +2511,23 @@ if(WIN32)
     # sqldrivers/qsqlite.dll at an older one (the Qt Maintenance Tool sometimes
     # skips plugin updates), causing 0xc0000005 in qsqlite.dll on startup.
     # If you have a clean Qt install (e.g. from aqtinstall) and want to source
-    # the SQL plugins from there, set FINCEPT_QT_CONSISTENT_PLUGINS_DIR to its
+    # the SQL plugins from there, set PINPUNCH_QT_CONSISTENT_PLUGINS_DIR to its
     # plugins/ directory. Empty (default) = skip override entirely.
-    set(FINCEPT_QT_CONSISTENT_PLUGINS_DIR "" CACHE PATH
+    set(PINPUNCH_QT_CONSISTENT_PLUGINS_DIR "" CACHE PATH
         "Optional: path to a clean Qt plugins/ dir to overwrite sqldrivers from")
-    if(FINCEPT_QT_CONSISTENT_PLUGINS_DIR
-       AND EXISTS "${FINCEPT_QT_CONSISTENT_PLUGINS_DIR}/sqldrivers/qsqlite.dll")
+    if(PINPUNCH_QT_CONSISTENT_PLUGINS_DIR
+       AND EXISTS "${PINPUNCH_QT_CONSISTENT_PLUGINS_DIR}/sqldrivers/qsqlite.dll")
         add_custom_command(TARGET FinceptTerminal POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory
                 "$<TARGET_FILE_DIR:FinceptTerminal>/sqldrivers"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${FINCEPT_QT_CONSISTENT_PLUGINS_DIR}/sqldrivers/qsqlite.dll"
+                "${PINPUNCH_QT_CONSISTENT_PLUGINS_DIR}/sqldrivers/qsqlite.dll"
                 "$<TARGET_FILE_DIR:FinceptTerminal>/sqldrivers/qsqlite.dll"
-            COMMENT "Overwriting sqldrivers from FINCEPT_QT_CONSISTENT_PLUGINS_DIR..."
+            COMMENT "Overwriting sqldrivers from PINPUNCH_QT_CONSISTENT_PLUGINS_DIR..."
         )
-    elseif(FINCEPT_QT_CONSISTENT_PLUGINS_DIR)
+    elseif(PINPUNCH_QT_CONSISTENT_PLUGINS_DIR)
         message(WARNING
-            "FINCEPT_QT_CONSISTENT_PLUGINS_DIR set to '${FINCEPT_QT_CONSISTENT_PLUGINS_DIR}' "
+            "PINPUNCH_QT_CONSISTENT_PLUGINS_DIR set to '${PINPUNCH_QT_CONSISTENT_PLUGINS_DIR}' "
             "but sqldrivers/qsqlite.dll not found there — skipping override.")
     endif()
 endif()
@@ -2567,51 +2579,51 @@ add_custom_command(TARGET FinceptTerminal POST_BUILD
 )
 
 # Bundle yt-dlp for dashboard YouTube playback on all platforms.
-# Override path with: -DFINCEPT_YTDLP_EXE=/abs/path/to/yt-dlp[.exe]
-set(FINCEPT_YTDLP_EXE "" CACHE FILEPATH "Path to yt-dlp executable to bundle with FinceptTerminal")
+# Override path with: -DPINPUNCH_YTDLP_EXE=/abs/path/to/yt-dlp[.exe]
+set(PINPUNCH_YTDLP_EXE "" CACHE FILEPATH "Path to yt-dlp executable to bundle with FinceptTerminal")
 # Default OFF so builds on CI / macOS / Linux succeed without yt-dlp pre-installed.
 # Set ON only for official release builds where yt-dlp must be present.
-option(FINCEPT_REQUIRE_BUNDLED_YTDLP "Fail configure if yt-dlp is missing" OFF)
+option(PINPUNCH_REQUIRE_BUNDLED_YTDLP "Fail configure if yt-dlp is missing" OFF)
 
-set(FINCEPT_YTDLP_TO_BUNDLE "")
-if(FINCEPT_YTDLP_EXE)
-    set(FINCEPT_YTDLP_TO_BUNDLE "${FINCEPT_YTDLP_EXE}")
+set(PINPUNCH_YTDLP_TO_BUNDLE "")
+if(PINPUNCH_YTDLP_EXE)
+    set(PINPUNCH_YTDLP_TO_BUNDLE "${PINPUNCH_YTDLP_EXE}")
 else()
-    find_program(FINCEPT_YTDLP_AUTO_EXE NAMES yt-dlp yt-dlp.exe)
-    if(FINCEPT_YTDLP_AUTO_EXE)
-        set(FINCEPT_YTDLP_TO_BUNDLE "${FINCEPT_YTDLP_AUTO_EXE}")
+    find_program(PINPUNCH_YTDLP_AUTO_EXE NAMES yt-dlp yt-dlp.exe)
+    if(PINPUNCH_YTDLP_AUTO_EXE)
+        set(PINPUNCH_YTDLP_TO_BUNDLE "${PINPUNCH_YTDLP_AUTO_EXE}")
     endif()
 endif()
 
-if(FINCEPT_YTDLP_TO_BUNDLE AND EXISTS "${FINCEPT_YTDLP_TO_BUNDLE}")
+if(PINPUNCH_YTDLP_TO_BUNDLE AND EXISTS "${PINPUNCH_YTDLP_TO_BUNDLE}")
     if(WIN32)
-        set(FINCEPT_YTDLP_OUTPUT_NAME "yt-dlp.exe")
+        set(PINPUNCH_YTDLP_OUTPUT_NAME "yt-dlp.exe")
     else()
-        set(FINCEPT_YTDLP_OUTPUT_NAME "yt-dlp")
+        set(PINPUNCH_YTDLP_OUTPUT_NAME "yt-dlp")
     endif()
 
     add_custom_command(TARGET FinceptTerminal POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${FINCEPT_YTDLP_TO_BUNDLE}"
-            "$<TARGET_FILE_DIR:FinceptTerminal>/${FINCEPT_YTDLP_OUTPUT_NAME}"
+            "${PINPUNCH_YTDLP_TO_BUNDLE}"
+            "$<TARGET_FILE_DIR:FinceptTerminal>/${PINPUNCH_YTDLP_OUTPUT_NAME}"
         COMMENT "Copying yt-dlp for dashboard video playback..."
     )
 
     if(UNIX)
         add_custom_command(TARGET FinceptTerminal POST_BUILD
-            COMMAND chmod +x "$<TARGET_FILE_DIR:FinceptTerminal>/${FINCEPT_YTDLP_OUTPUT_NAME}"
+            COMMAND chmod +x "$<TARGET_FILE_DIR:FinceptTerminal>/${PINPUNCH_YTDLP_OUTPUT_NAME}"
             COMMENT "Setting executable permission on bundled yt-dlp..."
         )
     endif()
 else()
-    set(FINCEPT_YTDLP_MISSING_MSG
-        "yt-dlp not found. Set FINCEPT_YTDLP_EXE or install yt-dlp on build machine. "
+    set(PINPUNCH_YTDLP_MISSING_MSG
+        "yt-dlp not found. Set PINPUNCH_YTDLP_EXE or install yt-dlp on build machine. "
         "Bundling is required so end users need no setup."
     )
-    if(FINCEPT_REQUIRE_BUNDLED_YTDLP)
-        message(FATAL_ERROR "${FINCEPT_YTDLP_MISSING_MSG}")
+    if(PINPUNCH_REQUIRE_BUNDLED_YTDLP)
+        message(FATAL_ERROR "${PINPUNCH_YTDLP_MISSING_MSG}")
     else()
-        message(WARNING "${FINCEPT_YTDLP_MISSING_MSG}")
+        message(WARNING "${PINPUNCH_YTDLP_MISSING_MSG}")
     endif()
 endif()
 
@@ -2699,8 +2711,8 @@ else()
             DESTINATION "share/metainfo" COMPONENT core)
 
     # yt-dlp (if bundled)
-    if(FINCEPT_YTDLP_TO_BUNDLE AND EXISTS "${FINCEPT_YTDLP_TO_BUNDLE}")
-        install(PROGRAMS "${FINCEPT_YTDLP_TO_BUNDLE}"
+    if(PINPUNCH_YTDLP_TO_BUNDLE AND EXISTS "${PINPUNCH_YTDLP_TO_BUNDLE}")
+        install(PROGRAMS "${PINPUNCH_YTDLP_TO_BUNDLE}"
                 DESTINATION "bin"
                 RENAME "yt-dlp" COMPONENT core)
     endif()
@@ -2708,16 +2720,16 @@ endif()
 
 # ── Installer (QtIFW via CPackIFW) ───────────────────────────────────────────
 # Generate cross-platform installer with uninstaller:
-#   cmake -B build -DFINCEPT_BUILD_INSTALLER=ON -DDEPLOY_QT=ON ...
+#   cmake -B build -DPINPUNCH_BUILD_INSTALLER=ON -DDEPLOY_QT=ON ...
 #   cmake --build build --config Release
 #   cd build && cpack -G IFW -C Release
 #
 # Requires: Qt Installer Framework (binarycreator on PATH or in Qt install)
 # Output:   FinceptTerminal-<ver>-<platform>-setup.exe/.run/.app
 
-option(FINCEPT_BUILD_INSTALLER "Generate QtIFW installer via CPack" OFF)
+option(PINPUNCH_BUILD_INSTALLER "Generate QtIFW installer via CPack" OFF)
 
-if(FINCEPT_BUILD_INSTALLER)
+if(PINPUNCH_BUILD_INSTALLER)
 
     # ── Windows: capture windeployqt output for the installer ────────────────
     if(WIN32 AND DEPLOY_QT)
@@ -2774,9 +2786,9 @@ if(FINCEPT_BUILD_INSTALLER)
     # formats if the corresponding tools are present on PATH.
     set(CPACK_GENERATOR "IFW")
     if(UNIX AND NOT APPLE)
-        find_program(_FINCEPT_DPKG_EXE dpkg)
-        find_program(_FINCEPT_RPMBUILD_EXE rpmbuild)
-        if(_FINCEPT_DPKG_EXE)
+        find_program(_PINPUNCH_DPKG_EXE dpkg)
+        find_program(_PINPUNCH_RPMBUILD_EXE rpmbuild)
+        if(_PINPUNCH_DPKG_EXE)
             list(APPEND CPACK_GENERATOR "DEB")
             set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Fincept Corporation <support@fincept.in>")
             set(CPACK_DEBIAN_PACKAGE_SECTION "misc")
@@ -2796,7 +2808,7 @@ if(FINCEPT_BUILD_INSTALLER)
             endif()
             message(STATUS "CPack: DEB generator enabled (${CPACK_DEBIAN_PACKAGE_ARCHITECTURE})")
         endif()
-        if(_FINCEPT_RPMBUILD_EXE)
+        if(_PINPUNCH_RPMBUILD_EXE)
             list(APPEND CPACK_GENERATOR "RPM")
             set(CPACK_RPM_PACKAGE_LICENSE "AGPL-3.0-or-later")
             set(CPACK_RPM_PACKAGE_GROUP "Applications/Productivity")
@@ -2811,7 +2823,7 @@ if(FINCEPT_BUILD_INSTALLER)
             endif()
             message(STATUS "CPack: RPM generator enabled (${CPACK_RPM_PACKAGE_ARCHITECTURE})")
         endif()
-        if(NOT _FINCEPT_DPKG_EXE AND NOT _FINCEPT_RPMBUILD_EXE)
+        if(NOT _PINPUNCH_DPKG_EXE AND NOT _PINPUNCH_RPMBUILD_EXE)
             message(STATUS "CPack: only IFW generator enabled — install dpkg-dev / rpm-build "
                            "for native .deb/.rpm output")
         endif()
@@ -2836,7 +2848,7 @@ if(FINCEPT_BUILD_INSTALLER)
     endif()
 
     # ── CPackIFW installer configuration ─────────────────────────────────────
-    set(CPACK_IFW_PACKAGE_TITLE "Fincept Terminal")
+    set(CPACK_IFW_PACKAGE_TITLE "Pinpunch Terminal")
     set(CPACK_IFW_PACKAGE_NAME "com.fincept.terminal")
     set(CPACK_IFW_PACKAGE_PUBLISHER "Fincept Corporation")
     set(CPACK_IFW_PACKAGE_START_MENU_DIRECTORY "Fincept")
@@ -2876,39 +2888,39 @@ if(FINCEPT_BUILD_INSTALLER)
     if(WIN32)
         # CMAKE_SYSTEM_PROCESSOR on Windows is "AMD64" for x64 and "ARM64" for arm64.
         if(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|aarch64")
-            set(_FINCEPT_PKG_ARCH "arm64")
+            set(_PINPUNCH_PKG_ARCH "arm64")
         else()
-            set(_FINCEPT_PKG_ARCH "x64")
+            set(_PINPUNCH_PKG_ARCH "x64")
         endif()
         set(CPACK_PACKAGE_FILE_NAME
-            "FinceptTerminal-${CMAKE_PROJECT_VERSION}-windows-${_FINCEPT_PKG_ARCH}-setup")
+            "FinceptTerminal-${CMAKE_PROJECT_VERSION}-windows-${_PINPUNCH_PKG_ARCH}-setup")
     elseif(APPLE)
         # On macOS CMAKE_OSX_ARCHITECTURES is the authoritative source
         # (it drives the actual binary slice). Fall back to host processor.
         if(CMAKE_OSX_ARCHITECTURES)
             list(LENGTH CMAKE_OSX_ARCHITECTURES _osx_arch_count)
             if(_osx_arch_count GREATER 1)
-                set(_FINCEPT_PKG_ARCH "universal")
+                set(_PINPUNCH_PKG_ARCH "universal")
             elseif("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "arm64")
-                set(_FINCEPT_PKG_ARCH "arm64")
+                set(_PINPUNCH_PKG_ARCH "arm64")
             else()
-                set(_FINCEPT_PKG_ARCH "x64")
+                set(_PINPUNCH_PKG_ARCH "x64")
             endif()
         elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
-            set(_FINCEPT_PKG_ARCH "arm64")
+            set(_PINPUNCH_PKG_ARCH "arm64")
         else()
-            set(_FINCEPT_PKG_ARCH "x64")
+            set(_PINPUNCH_PKG_ARCH "x64")
         endif()
         set(CPACK_PACKAGE_FILE_NAME
-            "FinceptTerminal-${CMAKE_PROJECT_VERSION}-macos-${_FINCEPT_PKG_ARCH}-setup")
+            "FinceptTerminal-${CMAKE_PROJECT_VERSION}-macos-${_PINPUNCH_PKG_ARCH}-setup")
     else()
         if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
-            set(_FINCEPT_PKG_ARCH "arm64")
+            set(_PINPUNCH_PKG_ARCH "arm64")
         else()
-            set(_FINCEPT_PKG_ARCH "x64")
+            set(_PINPUNCH_PKG_ARCH "x64")
         endif()
         set(CPACK_PACKAGE_FILE_NAME
-            "FinceptTerminal-${CMAKE_PROJECT_VERSION}-linux-${_FINCEPT_PKG_ARCH}-setup")
+            "FinceptTerminal-${CMAKE_PROJECT_VERSION}-linux-${_PINPUNCH_PKG_ARCH}-setup")
     endif()
     message(STATUS "  Installer filename: ${CPACK_PACKAGE_FILE_NAME}")
 
@@ -2918,7 +2930,7 @@ if(FINCEPT_BUILD_INSTALLER)
 
     # ── Define install components ────────────────────────────────────────────
     cpack_add_component(core
-        DISPLAY_NAME "Fincept Terminal"
+        DISPLAY_NAME "Pinpunch Terminal"
         DESCRIPTION  "Core application executable and Qt runtime libraries"
         REQUIRED)
 
@@ -2950,15 +2962,15 @@ if(FINCEPT_BUILD_INSTALLER)
     # `cmake --build . --target appimage`) so CI can produce a single-file
     # portable AppImage. Distro-agnostic; runs on glibc 2.31+ targets.
     if(UNIX AND NOT APPLE)
-        find_program(_FINCEPT_LINUXDEPLOY linuxdeploy)
-        find_program(_FINCEPT_LINUXDEPLOY_QT linuxdeploy-plugin-qt)
-        if(_FINCEPT_LINUXDEPLOY AND _FINCEPT_LINUXDEPLOY_QT)
+        find_program(_PINPUNCH_LINUXDEPLOY linuxdeploy)
+        find_program(_PINPUNCH_LINUXDEPLOY_QT linuxdeploy-plugin-qt)
+        if(_PINPUNCH_LINUXDEPLOY AND _PINPUNCH_LINUXDEPLOY_QT)
             add_custom_target(appimage
                 COMMAND ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}"
                     --prefix "${CMAKE_BINARY_DIR}/AppDir/usr"
                 COMMAND ${CMAKE_COMMAND} -E env
                     QMAKE=${_fincept_qt_prefix}/bin/qmake
-                    "${_FINCEPT_LINUXDEPLOY}"
+                    "${_PINPUNCH_LINUXDEPLOY}"
                     --appdir "${CMAKE_BINARY_DIR}/AppDir"
                     --plugin qt
                     --output appimage
@@ -2973,7 +2985,7 @@ if(FINCEPT_BUILD_INSTALLER)
         endif()
     endif()
 
-endif() # FINCEPT_BUILD_INSTALLER
+endif() # PINPUNCH_BUILD_INSTALLER
 
 # ── Code signing helpers ─────────────────────────────────────────────────────
 # These are opt-in custom targets, not POST_BUILD steps, so signing only runs
@@ -2982,39 +2994,39 @@ endif() # FINCEPT_BUILD_INSTALLER
 
 # macOS: codesign + notarytool + stapler
 if(APPLE)
-    set(FINCEPT_MACOS_SIGN_IDENTITY "" CACHE STRING
+    set(PINPUNCH_MACOS_SIGN_IDENTITY "" CACHE STRING
         "Codesign identity (e.g. 'Developer ID Application: Fincept Corp (TEAMID)')")
-    set(FINCEPT_MACOS_NOTARY_APPLE_ID "" CACHE STRING "Apple ID for notarytool submission")
-    set(FINCEPT_MACOS_NOTARY_TEAM_ID  "" CACHE STRING "Apple Developer Team ID")
-    set(FINCEPT_MACOS_NOTARY_PASSWORD "" CACHE STRING "App-specific password for notarytool")
+    set(PINPUNCH_MACOS_NOTARY_APPLE_ID "" CACHE STRING "Apple ID for notarytool submission")
+    set(PINPUNCH_MACOS_NOTARY_TEAM_ID  "" CACHE STRING "Apple Developer Team ID")
+    set(PINPUNCH_MACOS_NOTARY_PASSWORD "" CACHE STRING "App-specific password for notarytool")
 
-    if(FINCEPT_MACOS_SIGN_IDENTITY)
-        find_program(_FINCEPT_MACDEPLOYQT macdeployqt HINTS "${_fincept_qt_prefix}/bin")
-        find_program(_FINCEPT_NOTARYTOOL  notarytool)
-        find_program(_FINCEPT_STAPLER     stapler)
-        find_program(_FINCEPT_DITTO       ditto)
+    if(PINPUNCH_MACOS_SIGN_IDENTITY)
+        find_program(_PINPUNCH_MACDEPLOYQT macdeployqt HINTS "${_fincept_qt_prefix}/bin")
+        find_program(_PINPUNCH_NOTARYTOOL  notarytool)
+        find_program(_PINPUNCH_STAPLER     stapler)
+        find_program(_PINPUNCH_DITTO       ditto)
 
         # Sign-only target: useful for dev signing (not notarized).
         add_custom_target(sign-macos
-            COMMAND "${_FINCEPT_MACDEPLOYQT}"
+            COMMAND "${_PINPUNCH_MACDEPLOYQT}"
                 "$<TARGET_BUNDLE_DIR:FinceptTerminal>"
-                "-sign-for-notarization=${FINCEPT_MACOS_SIGN_IDENTITY}"
-            COMMENT "Signing FinceptTerminal.app with ${FINCEPT_MACOS_SIGN_IDENTITY}..."
+                "-sign-for-notarization=${PINPUNCH_MACOS_SIGN_IDENTITY}"
+            COMMENT "Signing FinceptTerminal.app with ${PINPUNCH_MACOS_SIGN_IDENTITY}..."
             VERBATIM)
 
         # Full release pipeline: sign → zip → submit → wait → staple.
-        if(FINCEPT_MACOS_NOTARY_APPLE_ID
-           AND FINCEPT_MACOS_NOTARY_TEAM_ID
-           AND FINCEPT_MACOS_NOTARY_PASSWORD)
+        if(PINPUNCH_MACOS_NOTARY_APPLE_ID
+           AND PINPUNCH_MACOS_NOTARY_TEAM_ID
+           AND PINPUNCH_MACOS_NOTARY_PASSWORD)
             add_custom_target(notarize-macos
-                COMMAND "${_FINCEPT_DITTO}" -c -k --keepParent
+                COMMAND "${_PINPUNCH_DITTO}" -c -k --keepParent
                     "$<TARGET_BUNDLE_DIR:FinceptTerminal>"
                     "${CMAKE_BINARY_DIR}/FinceptTerminal-notarize.zip"
                 COMMAND xcrun notarytool submit
                     "${CMAKE_BINARY_DIR}/FinceptTerminal-notarize.zip"
-                    --apple-id "${FINCEPT_MACOS_NOTARY_APPLE_ID}"
-                    --team-id  "${FINCEPT_MACOS_NOTARY_TEAM_ID}"
-                    --password "${FINCEPT_MACOS_NOTARY_PASSWORD}"
+                    --apple-id "${PINPUNCH_MACOS_NOTARY_APPLE_ID}"
+                    --team-id  "${PINPUNCH_MACOS_NOTARY_TEAM_ID}"
+                    --password "${PINPUNCH_MACOS_NOTARY_PASSWORD}"
                     --wait
                 COMMAND xcrun stapler staple "$<TARGET_BUNDLE_DIR:FinceptTerminal>"
                 DEPENDS sign-macos
@@ -3026,28 +3038,28 @@ endif()
 
 # Windows: Authenticode signing via signtool
 if(WIN32)
-    set(FINCEPT_WIN_SIGN_CERT     "" CACHE FILEPATH "Path to .pfx code-signing certificate")
-    set(FINCEPT_WIN_SIGN_PASSWORD "" CACHE STRING   "Password for the .pfx certificate")
-    set(FINCEPT_WIN_SIGN_TIMESTAMP_URL
+    set(PINPUNCH_WIN_SIGN_CERT     "" CACHE FILEPATH "Path to .pfx code-signing certificate")
+    set(PINPUNCH_WIN_SIGN_PASSWORD "" CACHE STRING   "Password for the .pfx certificate")
+    set(PINPUNCH_WIN_SIGN_TIMESTAMP_URL
         "http://timestamp.digicert.com" CACHE STRING "RFC 3161 timestamp URL")
 
-    if(FINCEPT_WIN_SIGN_CERT)
-        find_program(_FINCEPT_SIGNTOOL signtool
+    if(PINPUNCH_WIN_SIGN_CERT)
+        find_program(_PINPUNCH_SIGNTOOL signtool
             HINTS ${_fincept_sdk_dirs}
                   "$ENV{WindowsSdkVerBinPath}x64")
-        if(_FINCEPT_SIGNTOOL)
+        if(_PINPUNCH_SIGNTOOL)
             add_custom_target(sign-windows
-                COMMAND "${_FINCEPT_SIGNTOOL}" sign
+                COMMAND "${_PINPUNCH_SIGNTOOL}" sign
                     /fd SHA256
-                    /tr "${FINCEPT_WIN_SIGN_TIMESTAMP_URL}"
+                    /tr "${PINPUNCH_WIN_SIGN_TIMESTAMP_URL}"
                     /td SHA256
-                    /f  "${FINCEPT_WIN_SIGN_CERT}"
-                    /p  "${FINCEPT_WIN_SIGN_PASSWORD}"
+                    /f  "${PINPUNCH_WIN_SIGN_CERT}"
+                    /p  "${PINPUNCH_WIN_SIGN_PASSWORD}"
                     "$<TARGET_FILE:FinceptTerminal>"
                 COMMENT "Signing FinceptTerminal.exe with Authenticode..."
                 VERBATIM)
         else()
-            message(WARNING "FINCEPT_WIN_SIGN_CERT set but signtool.exe not found")
+            message(WARNING "PINPUNCH_WIN_SIGN_CERT set but signtool.exe not found")
         endif()
     endif()
 endif()
@@ -3055,9 +3067,9 @@ endif()
 # ── Build configuration summary ──────────────────────────────────────────────
 message(STATUS "")
 message(STATUS "============================================================")
-message(STATUS "  Fincept Terminal ${CMAKE_PROJECT_VERSION} — build summary")
+message(STATUS "  Pinpunch Terminal ${CMAKE_PROJECT_VERSION} — build summary")
 message(STATUS "============================================================")
-message(STATUS "  Qt version        : ${Qt6Core_VERSION}  (pin mode: ${FINCEPT_QT_PIN_MODE})")
+message(STATUS "  Qt version        : ${Qt6Core_VERSION}  (pin mode: ${PINPUNCH_QT_PIN_MODE})")
 message(STATUS "  Build type        : ${CMAKE_BUILD_TYPE}")
 message(STATUS "  Platform          : ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_PROCESSOR}")
 message(STATUS "  Compiler          : ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
@@ -3065,7 +3077,7 @@ if(APPLE AND CMAKE_OSX_ARCHITECTURES)
 message(STATUS "  macOS arch        : ${CMAKE_OSX_ARCHITECTURES}")
 endif()
 message(STATUS "------------------------------------------------------------")
-message(STATUS "  Excel export      : ${FINCEPT_HAS_PRIVATE_HEADERS}  (Qt6::GuiPrivate / QXlsx)")
+message(STATUS "  Excel export      : ${PINPUNCH_HAS_PRIVATE_HEADERS}  (Qt6::GuiPrivate / QXlsx)")
 if(DEFINED HAS_WEBSOCKETS)
 message(STATUS "  WebSockets        : ${HAS_WEBSOCKETS}")
 endif()
@@ -3078,17 +3090,17 @@ endif()
 if(DEFINED HAS_WAYLAND)
 message(STATUS "  Wayland (Linux)   : ${HAS_WAYLAND}")
 endif()
-if(APPLE AND FINCEPT_MACOS_SIGN_IDENTITY)
+if(APPLE AND PINPUNCH_MACOS_SIGN_IDENTITY)
 message(STATUS "  macOS signing     : ON   (target: sign-macos / notarize-macos)")
 endif()
-if(WIN32 AND FINCEPT_WIN_SIGN_CERT)
+if(WIN32 AND PINPUNCH_WIN_SIGN_CERT)
 message(STATUS "  Windows signing   : ON   (target: sign-windows)")
 endif()
-message(STATUS "  Tests             : ${FINCEPT_BUILD_TESTS}")
+message(STATUS "  Tests             : ${PINPUNCH_BUILD_TESTS}")
 message(STATUS "============================================================")
 message(STATUS "")
 
 # ── Test suite (opt-in; see fincept-qt/tests/CMakeLists.txt) ─────────────────
-if(FINCEPT_BUILD_TESTS)
+if(PINPUNCH_BUILD_TESTS)
     add_subdirectory(tests)
 endif()

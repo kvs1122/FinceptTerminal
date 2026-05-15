@@ -75,7 +75,7 @@ void ClapDetectorService::start() {
     env.insert("PYTHONIOENCODING", "utf-8");
     env.insert("PYTHONDONTWRITEBYTECODE", "1");
     env.insert("PYTHONUNBUFFERED", "1");
-    env.insert("FINCEPT_DATA_DIR", python::PythonSetupManager::instance().install_dir());
+    env.insert("PINPUNCH_DATA_DIR", python::PythonSetupManager::instance().install_dir());
 
     const QString existing_pypath = env.value("PYTHONPATH");
 #ifdef _WIN32
@@ -98,12 +98,12 @@ void ClapDetectorService::start() {
     LOG_INFO(CLAP_TAG, QString("env: mode=%1 peak=%2 ratio=%3 gap=%4 debounce=%5 device='%6'")
                            .arg(mode, peak, ratio, gap, debounce, device));
 
-    env.insert("FINCEPT_CLAP_MODE", mode);
-    env.insert("FINCEPT_CLAP_PEAK_MIN", peak);
-    env.insert("FINCEPT_CLAP_PR_RATIO", ratio);
-    env.insert("FINCEPT_CLAP_MAX_GAP_MS", gap);
-    env.insert("FINCEPT_CLAP_DEBOUNCE_MS", debounce);
-    env.insert("FINCEPT_STT_DEVICE", device);
+    env.insert("PINPUNCH_CLAP_MODE", mode);
+    env.insert("PINPUNCH_CLAP_PEAK_MIN", peak);
+    env.insert("PINPUNCH_CLAP_PR_RATIO", ratio);
+    env.insert("PINPUNCH_CLAP_MAX_GAP_MS", gap);
+    env.insert("PINPUNCH_CLAP_DEBOUNCE_MS", debounce);
+    env.insert("PINPUNCH_STT_DEVICE", device);
 
     process_->setProcessEnvironment(env);
     process_->setWorkingDirectory(scripts_dir);

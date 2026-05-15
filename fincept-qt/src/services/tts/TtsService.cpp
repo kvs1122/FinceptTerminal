@@ -84,7 +84,7 @@ class PythonTtsProvider : public TtsProvider {
         env.insert("PYTHONIOENCODING", "utf-8");
         env.insert("PYTHONDONTWRITEBYTECODE", "1");
         env.insert("PYTHONUNBUFFERED", "1");
-        env.insert("FINCEPT_DATA_DIR", python::PythonSetupManager::instance().install_dir());
+        env.insert("PINPUNCH_DATA_DIR", python::PythonSetupManager::instance().install_dir());
 
         const QString scripts_dir = python::PythonRunner::instance().scripts_dir();
         const QString existing_pypath = env.value("PYTHONPATH");
@@ -331,7 +331,7 @@ class DeepgramTtsProvider final : public PythonTtsProvider {
                               .arg(api_key.length()).arg(model));
 
         env.insert("DEEPGRAM_API_KEY", api_key);
-        env.insert("FINCEPT_TTS_DG_MODEL", model);
+        env.insert("PINPUNCH_TTS_DG_MODEL", model);
     }
 };
 

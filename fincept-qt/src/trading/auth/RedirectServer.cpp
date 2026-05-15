@@ -17,7 +17,7 @@ constexpr const char* kResponseHtml =
     "display:flex;align-items:center;justify-content:center;height:100vh;margin:0}"
     "div{text-align:center}h1{color:#d97706;font-size:20px}p{color:#94a3b8}</style>"
     "</head><body><div><h1>Login captured</h1>"
-    "<p>You can close this tab and return to Fincept Terminal.</p></div></body></html>";
+    "<p>You can close this tab and return to Pinpunch Terminal.</p></div></body></html>";
 }
 
 RedirectServer::RedirectServer(QObject* parent)

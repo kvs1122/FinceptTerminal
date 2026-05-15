@@ -119,7 +119,7 @@ AboutScreen::AboutScreen(QWidget* parent) : QWidget(parent) {
 
         auto* left = new QVBoxLayout;
         left->setSpacing(4);
-        auto* name = new QLabel("Fincept Terminal");
+        auto* name = new QLabel("Pinpunch Terminal");
         name->setStyleSheet(QString("color: %1; font-size: 15px; font-weight: bold; background: transparent; "
                                     "font-family: 'Consolas','Courier New',monospace;")
                                 .arg(ui::colors::TEXT_PRIMARY()));
@@ -260,7 +260,7 @@ AboutScreen::AboutScreen(QWidget* parent) : QWidget(parent) {
         bvl->setContentsMargins(14, 10, 14, 12);
         bvl->setSpacing(6);
 
-        auto* desc = new QLabel("\"Fincept\", \"Fincept Terminal\", and associated logos are trademarks of "
+        auto* desc = new QLabel("\"Fincept\", \"Pinpunch Terminal\", and associated logos are trademarks of "
                                 "Fincept Corporation. Use of these marks requires explicit written permission.");
         desc->setStyleSheet(BODY());
         desc->setWordWrap(true);

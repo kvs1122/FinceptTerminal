@@ -110,7 +110,7 @@ PrivacyScreen::PrivacyScreen(QWidget* parent) : QWidget(parent) {
     pvl->addWidget(section_heading("#", "OUR COMMITMENT TO PRIVACY"));
     pvl->addWidget(
         body_text("At Fincept Corporation, we are committed to protecting your privacy. This policy describes "
-                  "how we collect, use, and safeguard your personal information when you use Fincept Terminal."));
+                  "how we collect, use, and safeguard your personal information when you use Pinpunch Terminal."));
 
     // 2 — Information We Collect
     pvl->addWidget(section_heading("@", "INFORMATION WE COLLECT"));

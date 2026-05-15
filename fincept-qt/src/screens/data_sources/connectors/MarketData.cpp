@@ -184,7 +184,7 @@ static QVector<ConnectorConfig> market_configs() {
          Category::MarketData,
          "F",
          "#F58025",
-         "Fincept Terminal Data API",
+         "Pinpunch Terminal Data API",
          true,
          true,
          {{"host", "Host", FieldType::Text, "localhost", true, "", {}},

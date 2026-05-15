@@ -79,6 +79,18 @@ const CatalogEntry kCatalog[] = {
     {"xai", "grok-2*",  kNoPublishedCap},
     {"xai", "*",        kNoPublishedCap},
 
+    // ── Cerebras ────────────────────────────────────────────────────────
+    // https://inference-docs.cerebras.ai/api-reference/models
+    // OpenAI-compatible. Inference is wafer-scale fast; no published output
+    // cap distinct from context, so use a generous default and let the user
+    // override if they bump into provider 400s.
+    {"cerebras", "llama-4*",            kNoPublishedCap},  // Maverick / Scout
+    {"cerebras", "llama-3.3-70b*",      kNoPublishedCap},
+    {"cerebras", "llama-3.1*",          kNoPublishedCap},
+    {"cerebras", "qwen-3*",             kNoPublishedCap},  // Qwen3 235B etc.
+    {"cerebras", "deepseek-r1-distill*", kNoPublishedCap},
+    {"cerebras", "*",                   kNoPublishedCap},
+
     // ── Groq ────────────────────────────────────────────────────────────
     // https://console.groq.com/docs/model/<id>
     {"groq", "llama-3.3-70b*",                      32768},

@@ -80,7 +80,14 @@ class MarketsScreen : public QWidget {
     QDateTime last_refresh_time_;
 
     static constexpr int kMinRefreshIntervalSec = 300;
-    static constexpr int kRefreshTimeoutMs      = 10000;
+    // Initial cold-start subscribe budget. Several panels route through
+    // yfinance (indices / forex / commodities / India) which spawns a
+    // Python subprocess (~2s import) + Yahoo HTTP (~2s) + per-symbol
+    // parse — first refresh reliably takes 10–15s. The badge stays
+    // "● LOADING" during that window. After this elapses we transition
+    // to "● PARTIAL" (some panels in) or "● TIMEOUT" (none). Hub-driven
+    // per-topic refresh continues regardless of this badge.
+    static constexpr int kRefreshTimeoutMs      = 30000;
     static constexpr int kNumColumns            = 3;
 };
 

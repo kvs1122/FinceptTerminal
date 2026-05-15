@@ -237,7 +237,7 @@ void NotificationsSection::build_ui() {
 
             NotificationRequest req;
             req.title   = "Fincept Test";
-            req.message = "This is a test notification from Fincept Terminal.";
+            req.message = "This is a test notification from Pinpunch Terminal.";
             req.trigger = NotifTrigger::Manual;
 
             QPointer<QLabel> status_ptr = pw.status_lbl;

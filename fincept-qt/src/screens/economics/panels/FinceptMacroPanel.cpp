@@ -37,7 +37,7 @@ void FinceptMacroPanel::activate() {
 }
 
 void FinceptMacroPanel::build_controls(QHBoxLayout* thl) {
-    auto* lbl = new QLabel("FINCEPT MACRO — COMING SOON");
+    auto* lbl = new QLabel("PINPUNCH MACRO — COMING SOON");
     lbl->setStyleSheet(ctrl_label_style() + "letter-spacing:1px;");
     thl->addWidget(lbl);
 }

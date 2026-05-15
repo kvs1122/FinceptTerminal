@@ -1,6 +1,9 @@
 #include "screens/dashboard/canvas/WidgetRegistry.h"
 
 #include "screens/dashboard/widgets/AgentErrorsWidget.h"
+#include "screens/dashboard/widgets/BotPnLWidget.h"
+#include "screens/dashboard/widgets/BotPositionsWidget.h"
+#include "screens/dashboard/widgets/BotWatchlistWidget.h"
 #include "screens/dashboard/widgets/BrokerHoldingsWidget.h"
 #include "screens/dashboard/widgets/CommoditiesWidget.h"
 #include "screens/dashboard/widgets/CryptoTickerWidget.h"
@@ -176,6 +179,24 @@ WidgetRegistry::WidgetRegistry() {
     register_widget({"notes", "Notes", "Tools",
                      "Recent / favorite financial notes — click to open Notes screen", 4, 5, 2, 3,
                      [](const QJsonObject& cfg) { return new widgets::NotesWidget(cfg); }});
+
+    // ── Pinpunch ↔ grok-claude bot widgets ──────────────────────────────
+    // Subscribe to bot:* topics fed by BotService (Producer reads disk
+    // files written by the bot). No Alpaca account / portfolio config
+    // needed — works the moment the bot is running and writing files.
+    register_widget({"bot_positions", "Bot Positions", "Bot",
+                     "Live Alpaca positions from grok-claude bot (bot:positions)", 6, 5, 4, 3,
+                     [](const QJsonObject& cfg) { return new widgets::BotPositionsWidget(cfg); }});
+
+    register_widget({"bot_pnl", "Bot Today P&L", "Bot",
+                     "Bot's day P&L + equity + halt indicator (bot:account, bot:risk)", 4, 4, 3, 3,
+                     [](const QJsonObject& cfg) { return new widgets::BotPnLWidget(cfg); }});
+
+    register_widget({"bot_watchlist", "Bot Watchlist", "Bot",
+                     "Live intraday watchlist from grok-claude bot, joined with Alpaca live prices "
+                     "(bot:watchlist). Adds/drops appear automatically as the bot updates state.",
+                     6, 5, 4, 3,
+                     [](const QJsonObject& cfg) { return new widgets::BotWatchlistWidget(cfg); }});
 }
 
 void WidgetRegistry::register_widget(WidgetMeta meta) {

@@ -998,7 +998,7 @@ void CodeEditorScreen::on_new_notebook() {
     cell.source = "# Fincept Python Notebook\n"
                   "# Write Python code and press Ctrl+Enter to run\n"
                   "\n"
-                  "print(\"Hello from Fincept Terminal!\")";
+                  "print(\"Hello from Pinpunch Terminal!\")";
     cells_.append(cell);
 
     selected_cell_id_ = cell.id;

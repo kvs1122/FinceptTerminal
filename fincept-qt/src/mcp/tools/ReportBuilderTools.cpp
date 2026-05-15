@@ -419,7 +419,7 @@ std::vector<ToolDef> get_report_builder_tools() {
         ToolDef t;
         t.name = "report_set_theme";
         t.description = "Set the report color theme. Valid names: 'Light Professional', 'Dark Corporate', "
-                        "'Fincept Terminal', 'Midnight Blue'.";
+                        "'Pinpunch Terminal', 'Midnight Blue'.";
         t.category = "report-builder";
         t.input_schema.properties =
             QJsonObject{{"name", QJsonObject{{"type", "string"}, {"description", "Theme name (case-sensitive)"}}}};

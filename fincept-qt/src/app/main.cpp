@@ -37,6 +37,9 @@
 #include "services/maritime/MaritimeService.h"
 #include "services/maritime/PortsCatalog.h"
 #include "services/markets/MarketDataService.h"
+#include "services/bot/BotService.h"   // Pinpunch ↔ grok-claude bot integration
+#include "services/bot/BotEconCalendarService.h"  // FMP/Finnhub economic calendar
+#include "services/bot/BotIndicesService.h"        // Alpaca ETF-proxy global indices
 #include "services/options/FiiDiiService.h"
 #include "services/options/OISnapshotter.h"
 #include "services/options/OptionChainService.h"
@@ -220,10 +223,10 @@ int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
     app.setApplicationName("FinceptTerminal");
     app.setOrganizationName("Fincept");
-#ifndef FINCEPT_VERSION_STRING
-#    define FINCEPT_VERSION_STRING "0.0.0-dev"
+#ifndef PINPUNCH_VERSION_STRING
+#    define PINPUNCH_VERSION_STRING "0.0.0-dev"
 #endif
-    app.setApplicationVersion(QStringLiteral(FINCEPT_VERSION_STRING));
+    app.setApplicationVersion(QStringLiteral(PINPUNCH_VERSION_STRING));
 
     // Quit only when LaunchpadScreen::closeEvent calls QCoreApplication::quit().
     // Default Qt behaviour fires lastWindowClosed AND schedules an auto-quit;
@@ -298,7 +301,14 @@ int main(int argc, char* argv[]) {
         "resources/component_catalog.json",
     });
     FT_MARK(20);
-    fincept::services::MarketDataService::instance().ensure_registered_with_hub();
+    // Disabled — BotIndicesService below owns the `market:quote:*` topic
+    // family. MarketDataService.cpp publishes via a yfinance Python script
+    // that isn't reliably wired in our build (no key, env, or runtime),
+    // so without disabling it we'd just see "No data" instead of our
+    // Alpaca-backed quotes. To re-enable, comment this line back in and
+    // remove the BotIndicesService wildcard claim in the bot data block
+    // below.
+    // fincept::services::MarketDataService::instance().ensure_registered_with_hub();
     FT_MARK(21);
 
     // ── Sync services needed by the default dashboard ─────────────────────────
@@ -307,8 +317,132 @@ int main(int argc, char* argv[]) {
     // else is deferred to a single QTimer::singleShot(0) below — the event
     // loop runs that batch immediately after the first paint, so cold-start
     // perceived latency drops without changing functional behavior.
-    fincept::services::NewsService::instance().ensure_registered_with_hub();
-    fincept::services::EconomicsService::instance().ensure_registered_with_hub();
+    // RSS-based NewsService disabled — bot's news feed (Benzinga via the
+    // alpaca_news_raw jsonl) is the sole publisher to `news:general`.
+    // Re-enable this line if you ever want RSS news back; the two will
+    // both publish, last-publish wins (BotService wins because higher freq).
+    // fincept::services::NewsService::instance().ensure_registered_with_hub();
+
+    // ── Pinpunch ↔ grok-claude bot data Producer (EARLY registration) ────
+    // MUST register here, BEFORE the window paints — the dashboard's
+    // NewsWidget (and other default-visible widgets) subscribe to
+    // news:general during their first show. If BotService is registered
+    // in the deferred batch instead, the widget reads the stale cached
+    // value first and the new producer never triggers a refresh because
+    // the cache is "fresh enough" by policy. Operator screenshot showed
+    // exactly that — May-1 INVESTING.COM RSS items frozen in the panel.
+    {
+        auto& bot = fincept::services::bot::BotService::instance();
+        bot.initialize();
+        auto& hub = fincept::datahub::DataHub::instance();
+        hub.register_producer(&bot);
+        using fincept::datahub::TopicPolicy;
+        // Operator wants near-realtime P&L — bot writes grok_status.json
+        // ~1 Hz, so 1-second polling here gives the freshest possible
+        // value without redundant disk reads. Disk reads of a 4 KB JSON
+        // file are sub-millisecond on macOS, so cost is negligible.
+        TopicPolicy realtime;   realtime.ttl_ms   = 1 * 1000;  realtime.min_interval_ms = 1 * 1000;
+        TopicPolicy fast;       fast.ttl_ms       = 2 * 1000;  fast.min_interval_ms = 2 * 1000;
+        TopicPolicy normal;     normal.ttl_ms     = 5 * 1000;  normal.min_interval_ms = 5 * 1000;
+        TopicPolicy slow;       slow.ttl_ms       = 30 * 1000; slow.min_interval_ms = 15 * 1000;
+        hub.set_policy(QStringLiteral("bot:account"),      realtime);  // P&L hero number
+        hub.set_policy(QStringLiteral("bot:positions"),    realtime);  // table mirrors broker every tick
+        hub.set_policy(QStringLiteral("bot:risk"),         realtime);  // halt indicator must be instant
+        // Watchlist: realtime so intraday adds/drops show immediately —
+        // disk read is sub-ms, Alpaca snapshots batch into one HTTP call.
+        hub.set_policy(QStringLiteral("bot:watchlist"),    realtime);
+        hub.set_policy(QStringLiteral("bot:trades_today"), fast);
+        hub.set_policy(QStringLiteral("bot:market"),       normal);
+        hub.set_policy(QStringLiteral("bot:news"),         normal);
+        hub.set_policy(QStringLiteral("news:general"),     normal);
+        // Force a first publish IMMEDIATELY so the cache is overwritten with
+        // bot data BEFORE any widget reads it via peek(). Without this, a
+        // widget that subscribes during first show may grab the stale
+        // CacheManager value (persisted from a prior session's RSS run)
+        // and not see fresh data until the next scheduler tick (~5s).
+        bot.refresh({
+            QStringLiteral("bot:news"),
+            QStringLiteral("news:general"),
+            QStringLiteral("bot:account"),
+            QStringLiteral("bot:positions"),
+            QStringLiteral("bot:risk"),
+            QStringLiteral("bot:market"),
+        });
+
+        // ── Economic calendar (FMP-backed) ─────────────────────────────
+        // Polls financialmodelingprep.com hourly for upcoming PPI / CPI /
+        // FOMC / NFP / etc. Publishes to econ:fincept:upcoming_events so
+        // Pinpunch's existing EconomicCalendarWidget consumes it without
+        // any widget-side change. If FMP_API_KEY is missing in env/.env,
+        // producer publishes empty array (widget shows "No events").
+        auto& econ = fincept::services::bot::BotEconCalendarService::instance();
+        hub.register_producer(&econ);
+        TopicPolicy hourly;
+        hourly.ttl_ms          = 60 * 60 * 1000;   // 1h cache
+        hourly.min_interval_ms = 60 * 60 * 1000;   // refresh at most hourly
+        hub.set_policy(QStringLiteral("econ:fincept:upcoming_events"), hourly);
+        // Force one fetch right now so the panel paints during this session.
+        econ.refresh({ QStringLiteral("econ:fincept:upcoming_events") });
+
+        // ── Universal market quotes (Alpaca + yfinance) ────────────────
+        // Hijacks the entire `market:quote:*` topic family. Smart per-
+        // symbol routing inside the producer:
+        //   • US stocks/ETFs (AAPL, SPY, TLT, BABA, NIO) → direct Alpaca
+        //     (sub-second feed; same source as positions/watchlist)
+        //   • Crypto (BTC-USD, ETH-USD) → Alpaca crypto endpoint
+        //   • Everything else → yfinance via the persistent PythonWorker
+        //     daemon (one batch_quotes call per refresh tick):
+        //       Indices       ^GSPC, ^DJI, ^N225, ^FTSE, ^NSEI, ^BSESN, …
+        //                     (TRUE index value, not ETF proxy)
+        //       Commodities   GC=F, CL=F, NG=F, …
+        //       Forex         EURUSD=X, USDJPY=X, USDINR=X, …
+        //       International .NS / .BO / .HK / .L / .AX / .TO / .SS
+        //
+        // Lights up: dashboard Global Indices widget AND every panel on
+        // the Markets tab (Stock Indices / Forex / Commodities / Bonds /
+        // ETFs / Crypto / Regional-US / Regional-China / India).
+        auto& idx = fincept::services::bot::BotIndicesService::instance();
+        hub.register_producer(&idx);
+        // 1-second cadence for all market-quote topics by default. This is
+        // the right call for direct-Alpaca crypto (sub-second feed) AND for
+        // Polygon-routed US stocks/ETFs/ADRs when a POLYGON_API_KEY is set
+        // — Polygon Stocks Developer plan has unlimited API calls so 1s
+        // batched snapshot polling gives sub-second-fresh marks. yfinance-
+        // routed symbols below get an explicit 10s override that wins.
+        hub.set_policy_pattern(QStringLiteral("market:quote:*"), realtime);
+        // yfinance-routed symbols (^XXX, =F, =X, .NS, etc.) need a
+        // gentler cadence: the persistent daemon handles requests fine,
+        // but Yahoo's per-IP rate limits don't love sub-5s polling. 10s
+        // still feels live for indices/futures/forex/international —
+        // those instruments don't move sub-minute the way US equities do.
+        TopicPolicy yf_policy;
+        yf_policy.ttl_ms          = 10 * 1000;
+        yf_policy.min_interval_ms = 10 * 1000;
+        for (const char* s : {
+                // Indices — US
+                "^GSPC", "^DJI", "^IXIC", "^RUT", "^VIX",
+                // Indices — international
+                "^FTSE", "^GDAXI", "^FCHI", "^N225", "^HSI",
+                "000001.SS", "^BSESN", "^NSEI", "^AXJO", "^STOXX50E",
+                "^SOX", "^IBEX", "^AEX", "^NYA", "^KS11", "^TWII",
+                // Bond yields
+                "^TNX", "^TYX", "^IRX", "^FVX",
+                // Commodity futures
+                "GC=F", "SI=F", "CL=F", "BZ=F", "NG=F", "HG=F",
+                "PL=F", "PA=F", "RB=F", "ZC=F", "ZW=F", "ZS=F", "HO=F",
+                // Forex
+                "EURUSD=X", "GBPUSD=X", "AUDUSD=X", "NZDUSD=X",
+                "USDJPY=X", "USDCHF=X", "USDCAD=X", "USDCNY=X", "USDINR=X",
+                "EURGBP=X", "EURJPY=X", "GBPJPY=X",
+            }) {
+            hub.set_policy(QStringLiteral("market:quote:") + QString::fromUtf8(s), yf_policy);
+        }
+    }
+
+    // Disabled — the BotEconCalendarService Producer above owns the same
+    // topic (econ:fincept:upcoming_events). Re-enabling Fincept's hosted
+    // service would put two producers in a publish race.
+    // fincept::services::EconomicsService::instance().ensure_registered_with_hub();
     fincept::services::MacroCalendarService::instance().ensure_registered_with_hub();
     fincept::trading::DataStreamManager::instance().ensure_registered_with_hub();
     fincept::services::geo::GeopoliticsService::instance().ensure_registered_with_hub();
@@ -478,6 +612,10 @@ int main(int argc, char* argv[]) {
             hub.set_policy_pattern(QStringLiteral("treasury:runway"), runway_p);
         }
 
+        // BotService moved to early/sync section near line ~311 — has to
+        // register BEFORE the window paints so default-visible widgets
+        // (NewsWidget) see it on their first subscribe.
+
         // STAKE tab producers (veFNCPT lock + real-yield + tier system).
         {
             auto& hub = fincept::datahub::DataHub::instance();
@@ -604,7 +742,7 @@ int main(int argc, char* argv[]) {
                 log.set_tag_level(tag, lvl_map.value(level));
         }
     }
-    LOG_INFO("App", "Fincept Terminal v4.0.3 starting...");
+    LOG_INFO("App", "Pinpunch Terminal v4.0.3 starting...");
     LOG_INFO("App", QString("TLS backend: %1 (available: %2)")
                         .arg(QSslSocket::activeBackend(),
                              QSslSocket::availableBackends().join(", ")));
@@ -669,21 +807,26 @@ int main(int argc, char* argv[]) {
             });
         }
 
-        // Load persisted font settings and apply before any window is shown
-        // — eliminates flash/wrong-font-on-startup. Theme is always Obsidian.
+        // Load persisted font + theme settings and apply before any window
+        // is shown — eliminates flash/wrong-theme-on-startup. Theme key
+        // "appearance.theme" is one of {Obsidian, Parchment}; default
+        // Obsidian to keep historical behaviour.
         {
             auto& repo = fincept::SettingsRepository::instance();
             auto& tm = fincept::ui::ThemeManager::instance();
             auto r_family = repo.get("appearance.font_family");
             auto r_size = repo.get("appearance.font_size");
+            auto r_theme = repo.get("appearance.theme");
             QString family = r_family.is_ok() ? r_family.value() : "Consolas";
             QString size_s = r_size.is_ok() ? r_size.value() : "14px";
+            QString theme = r_theme.is_ok() && !r_theme.value().isEmpty()
+                                ? r_theme.value() : QStringLiteral("Obsidian");
             int size_px = size_s.left(size_s.indexOf("px")).toInt();
             if (size_px <= 0)
                 size_px = 14;
             tm.apply_font(family, size_px);
-            tm.apply_theme("Obsidian");
-            LOG_INFO("App", "Theme: Obsidian, font: " + family + " " + size_s);
+            tm.apply_theme(theme);
+            LOG_INFO("App", "Theme: " + theme + ", font: " + family + " " + size_s);
         }
     }
 
@@ -787,7 +930,7 @@ int main(int argc, char* argv[]) {
         // (e.g. user somehow triggers it twice before the window is hidden).
         auto* setup_screen = new fincept::screens::SetupScreen;
         QPointer<fincept::screens::SetupScreen> screen_guard(setup_screen);
-        setup_screen->setWindowTitle("Fincept Terminal — First-Time Setup");
+        setup_screen->setWindowTitle("Pinpunch Terminal — First-Time Setup");
         setup_screen->resize(800, 600);
         setup_screen->show();
 
@@ -803,18 +946,27 @@ int main(int argc, char* argv[]) {
 
             fincept::KeyConfigManager::instance(); // init before WindowFrame registers shortcuts
 
-            // Phase 6 final: if the previous session ended uncleanly and a
-            // workspace snapshot is available, give the user the option to
-            // restore. On accept, WorkspaceShell::apply already constructs
-            // the frames it needs — we skip our own primary-window creation
-            // path. On skip (or no recovery available), fall through.
+            // Phase 6 recovery dialog DISABLED per operator request — was
+            // showing on every launch even after clean quits. Auto-saved
+            // snapshots are still written; user can manually restore via
+            // the Snapshots menu if ever needed. To re-enable, flip the
+            // gate below to `true`.
+            constexpr bool kShowRecoveryDialog = false;
             bool recovered = false;
-            if (auto* recovery = fincept::TerminalShell::instance().crash_recovery();
-                recovery && recovery->needs_recovery()) {
-                fincept::screens::CrashRecoveryDialog dlg(
-                    recovery, fincept::TerminalShell::instance().snapshot_ring());
-                dlg.exec();
-                recovered = dlg.was_restored();
+            if (kShowRecoveryDialog) {
+                if (auto* recovery = fincept::TerminalShell::instance().crash_recovery();
+                    recovery && recovery->needs_recovery()) {
+                    fincept::screens::CrashRecoveryDialog dlg(
+                        recovery, fincept::TerminalShell::instance().snapshot_ring());
+                    dlg.exec();
+                    recovered = dlg.was_restored();
+                }
+            } else if (auto* recovery = fincept::TerminalShell::instance().crash_recovery();
+                       recovery && recovery->needs_recovery()) {
+                // Mark clean so needs_recovery() returns false next launch
+                // even if this session also ends abruptly — operator
+                // explicitly opted out of the modal.
+                recovery->mark_clean_shutdown();
             }
 
             if (!recovered) {
@@ -866,18 +1018,23 @@ int main(int argc, char* argv[]) {
     // Ensure KeyConfigManager is initialized before WindowFrame registers shortcuts
     fincept::KeyConfigManager::instance();
 
-    // Phase 6 final: offer crash recovery before constructing the primary
-    // window. If the user accepts and restoration succeeds, WorkspaceShell
-    // has already built the frames it needs from the snapshot — we skip
-    // both the primary-window creation and the SessionManager-based
-    // secondary-window restoration paths to avoid duplicating windows.
+    // Phase 6 recovery dialog DISABLED per operator request — was
+    // showing on every launch. Snapshots are still autosaved and can be
+    // restored manually via the Snapshots menu. Flip kShowRecoveryDialog
+    // to `true` to re-enable the modal.
+    constexpr bool kShowRecoveryDialog = false;
     bool recovered = false;
-    if (auto* recovery = fincept::TerminalShell::instance().crash_recovery();
-        recovery && recovery->needs_recovery()) {
-        fincept::screens::CrashRecoveryDialog dlg(
-            recovery, fincept::TerminalShell::instance().snapshot_ring());
-        dlg.exec();
-        recovered = dlg.was_restored();
+    if (kShowRecoveryDialog) {
+        if (auto* recovery = fincept::TerminalShell::instance().crash_recovery();
+            recovery && recovery->needs_recovery()) {
+            fincept::screens::CrashRecoveryDialog dlg(
+                recovery, fincept::TerminalShell::instance().snapshot_ring());
+            dlg.exec();
+            recovered = dlg.was_restored();
+        }
+    } else if (auto* recovery = fincept::TerminalShell::instance().crash_recovery();
+               recovery && recovery->needs_recovery()) {
+        recovery->mark_clean_shutdown();
     }
 
     // Heap-allocate the primary window so we can skip it on a successful

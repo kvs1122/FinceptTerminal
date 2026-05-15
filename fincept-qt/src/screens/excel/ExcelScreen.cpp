@@ -16,7 +16,7 @@
 #include <QTabBar>
 #include <QVBoxLayout>
 
-#ifdef FINCEPT_HAS_QXLSX
+#ifdef PINPUNCH_HAS_QXLSX
 #include <xlsxdocument.h>
 #endif
 
@@ -192,7 +192,7 @@ void ExcelScreen::on_import() {
     if (path.isEmpty())
         return;
 
-#ifdef FINCEPT_HAS_QXLSX
+#ifdef PINPUNCH_HAS_QXLSX
     QXlsx::Document xlsx(path);
     QStringList sheet_names = xlsx.sheetNames();
     if (sheet_names.isEmpty()) {
@@ -256,7 +256,7 @@ void ExcelScreen::on_import() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 void ExcelScreen::on_export() {
-#ifdef FINCEPT_HAS_QXLSX
+#ifdef PINPUNCH_HAS_QXLSX
     QString path = QFileDialog::getSaveFileName(this, "Export as XLSX", file_name_, "Excel Files (*.xlsx)");
     if (path.isEmpty())
         return;

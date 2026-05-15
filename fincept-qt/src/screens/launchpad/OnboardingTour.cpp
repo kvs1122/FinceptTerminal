@@ -55,7 +55,7 @@ void OnboardingTour::show_for(QWidget* parent) {
 }
 
 OnboardingTour::OnboardingTour(QWidget* parent) : QDialog(parent) {
-    setWindowTitle(tr("Welcome to Fincept Terminal"));
+    setWindowTitle(tr("Welcome to Pinpunch Terminal"));
     setModal(true);
     setSizeGripEnabled(false);
     resize(560, 360);

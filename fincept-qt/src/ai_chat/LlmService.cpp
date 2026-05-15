@@ -131,7 +131,7 @@ void LlmService::ensure_config() const {
     // Default system prompt — primes the model to actually use tools instead of declining tool-feasible requests.
     if (system_prompt_.trimmed().isEmpty()) {
         system_prompt_ =
-            "You are Fincept AI, the intelligent assistant embedded inside the Fincept Terminal — "
+            "You are Fincept AI, the intelligent assistant embedded inside the Pinpunch Terminal — "
             "a professional desktop financial intelligence application. You have access to tools that "
             "let you interact with the terminal directly: navigate screens, fetch live market data, "
             "manage watchlists, query portfolios, paper-trade, run Python analytics, search SEC Edgar "
@@ -343,6 +343,8 @@ QString LlmService::get_endpoint_url() const {
         return "http://localhost:11434/v1/chat/completions";
     if (p == "xai")
         return "https://api.x.ai/v1/chat/completions";
+    if (p == "cerebras")
+        return "https://api.cerebras.ai/v1/chat/completions";
     return {};
 }
 
@@ -371,8 +373,10 @@ QMap<QString, QString> LlmService::get_headers() const {
             h["Authorization"] = "Bearer " + api_key_;
         if (p == "openrouter") {
             // Attribution for the openrouter.ai/rankings leaderboard.
-            h["HTTP-Referer"] = "https://fincept.in";
-            h["X-Title"] = "Fincept Terminal";
+            // Pinpunch is local-only — no public site to refer to, so we
+            // omit HTTP-Referer entirely. X-Title still identifies the
+            // client to OpenRouter without phoning home anywhere.
+            h["X-Title"] = "Pinpunch Terminal";
         }
     }
     return h;

@@ -3,6 +3,8 @@
 
 #include <QHash>
 #include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
 #include <QScrollArea>
 #include <QSet>
 #include <QTimer>
@@ -53,9 +55,16 @@ class MarketPulsePanel : public QWidget {
     QWidget* build_losers_section();
     QWidget* build_global_snapshot_section();
     QWidget* build_market_hours_section();
+    QWidget* build_ticker_search_section();
     QWidget* build_mover_row(const QString& symbol, double change, const QString& volume);
     QWidget* build_stat_row(const QString& label, const QString& value, const QString& change, const QString& color);
     QWidget* build_breadth_bar(const QString& label, int advancing, int declining);
+
+    /// Resolve a free-text query to a Polygon ticker, then chain the
+    /// snapshot + reference + 52w-aggregate fetches and render results.
+    void on_search_submit();
+    void render_search_status(const QString& msg, bool error);
+    void render_search_result();
 
     /// Re-apply all token-based styles so a theme switch updates every child widget.
     void refresh_theme();
@@ -144,6 +153,48 @@ class MarketPulsePanel : public QWidget {
     QHash<QString, services::QuoteData> snapshot_cache_;
     bool hub_active_ = false;
     QTimer* hours_timer_ = nullptr;
+
+    // ── Ticker Search (Polygon + Finnhub) ──
+    // Generation counter discards stale callbacks: each on_search_submit
+    // bumps it; callbacks compare against current_search_gen_ and bail if
+    // the user typed a new query while their previous responses were in
+    // flight. Each search fans out 4 parallel HTTP calls (snapshot +
+    // ticker details + 52w aggregates + finnhub earnings); fields render
+    // as each completes.
+    QLineEdit*   search_input_  = nullptr;
+    QPushButton* search_btn_    = nullptr;
+    QLabel*      search_status_ = nullptr;     // "Searching…", error msg, etc.
+    QWidget*     search_result_box_ = nullptr; // shown when we have data
+    QLabel*      sr_symbol_     = nullptr;     // "TSLA — Tesla, Inc."
+    QLabel*      sr_price_      = nullptr;     // "$259.32 +1.42%"
+    QLabel*      sr_day_range_  = nullptr;     // "DAY  H 261.10  /  L 257.40"
+    QLabel*      sr_52w_range_  = nullptr;     // "52W  H 488.54  /  L 138.80"
+    QLabel*      sr_mcap_       = nullptr;     // "MCAP  $834.5B"
+    QLabel*      sr_eps_actual_ = nullptr;     // "EPS Actual  $1.21"
+    QLabel*      sr_eps_est_    = nullptr;     // "EPS Estimate  $1.16"
+    QLabel*      sr_eps_date_   = nullptr;     // "Period  2025-09-30"
+    QLabel*      sr_eps_surp_   = nullptr;     // "Surprise  +4.31% (BEAT)"
+
+    struct SearchState {
+        QString ticker;
+        QString name;
+        double current_price = 0, change_pct = 0;
+        double day_high = 0, day_low = 0;
+        double w52_high = 0, w52_low = 0;
+        double market_cap = 0;
+        double eps_actual = 0, eps_estimate = 0, eps_surprise_pct = 0;
+        QString eps_period;
+        bool has_snapshot = false;
+        bool has_details = false;
+        bool has_w52 = false;
+        bool has_eps = false;
+    };
+    SearchState  current_search_;
+    qint64       current_search_gen_ = 0;
+
+    void start_polygon_chain(qint64 gen);
+    void start_fuzzy_search(qint64 gen, const QString& query);
+    void fetch_finnhub_earnings(qint64 gen, const QString& ticker);
 
     // Loading overlay shown over the scroll area while the union of the
     // breadth/movers/snapshot caches fills up. The denominator is the

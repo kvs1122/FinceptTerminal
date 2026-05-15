@@ -63,14 +63,27 @@ void QuoteTableWidget::refresh_data() {
 
 void QuoteTableWidget::hub_subscribe_all() {
     auto& hub = datahub::DataHub::instance();
-    set_loading_progress(row_cache_.size(), symbols_.size());
+    // Cold-start indicator: only shown until the FIRST quote lands. After
+    // that we always reveal the table — even with one missing row, partial
+    // data beats a 92 %-opaque skeleton. We used to call set_loading_progress
+    // on every quote arrival, which kept the overlay pinned forever whenever
+    // a single symbol failed to publish (e.g. yfinance occasionally drops
+    // 000001.SS / ^NSEI), so the operator saw their indices flash and then
+    // get re-buried by the loading skeleton on every refresh tick.
+    if (row_cache_.isEmpty())
+        set_loading_progress(0, symbols_.size());
     for (const auto& sym : symbols_) {
         const QString topic = QStringLiteral("market:quote:") + sym;
         hub.subscribe(this, topic, [this, sym](const QVariant& v) {
             if (!v.canConvert<services::QuoteData>())
                 return;
+            const bool was_empty = row_cache_.isEmpty();
             row_cache_.insert(sym, v.value<services::QuoteData>());
-            set_loading_progress(row_cache_.size(), symbols_.size());
+            if (was_empty) {
+                // First quote ever — kill the loading overlay; from now on
+                // every refresh just updates whatever rows are in the cache.
+                set_loading(false);
+            }
             render_from_cache();
         });
     }

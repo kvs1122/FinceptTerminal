@@ -83,9 +83,9 @@ TrademarksScreen::TrademarksScreen(QWidget* parent) : QWidget(parent) {
     pvl->setContentsMargins(20, 16, 20, 16);
     pvl->setSpacing(6);
 
-    pvl->addWidget(heading("1", "FINCEPT TRADEMARKS"));
+    pvl->addWidget(heading("1", "PINPUNCH TRADEMARKS"));
     pvl->addWidget(bullet("Fincept (TM)"));
-    pvl->addWidget(bullet("Fincept Terminal (TM)"));
+    pvl->addWidget(bullet("Pinpunch Terminal (TM)"));
     pvl->addWidget(bullet("Fincept Corporation (TM)"));
     pvl->addWidget(bullet("Fincept Logo and associated visual identities"));
 

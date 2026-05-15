@@ -42,6 +42,50 @@ const ThemeTokens THEME_OBSIDIAN = {
     .chart_colors = {"#d97706", "#0891b2", "#16a34a", "#dc2626", "#2563eb", "#ca8a04"},
 };
 
+// ── Parchment (light theme) ─────────────────────────────────────────────
+// Warm off-white surfaces with dark slate text. Hand-tuned so the same
+// QSS template (built from these tokens) yields a comfortable light UI:
+//   - bg ramps go LIGHT→DARKER for hover/raised (inverse of Obsidian)
+//   - text ramps go DARK→LIGHTER (inverse of Obsidian)
+//   - accent is a slightly deeper amber for AA contrast on white
+//   - positive/negative colours nudged slightly darker so green/red
+//     numbers stay legible against #ffffff (the bright greens/reds from
+//     Obsidian wash out on white)
+//   - row_alt is a very subtle warm tint so banded tables read cleanly
+const ThemeTokens THEME_PARCHMENT = {
+    .name = "Parchment",
+    .bg_base = "#f5f4ef",     // outer-most background (warm cream)
+    .bg_surface = "#ffffff",  // panels / cards
+    .bg_raised = "#ebe9e1",   // toolbars, headers
+    .bg_hover = "#e2dfd4",    // hover state
+    .border_dim = "#e5e3da",
+    .border_med = "#d4d1c5",
+    .border_bright = "#b3b0a3",
+    .text_primary = "#1a1a1a",
+    .text_secondary = "#525252",
+    .text_tertiary = "#7a7a7a",
+    .text_dim = "#a3a3a3",
+    .accent = "#b45309",       // amber-700 — passes AA on white
+    .accent_dim = "#fed7aa",   // soft accent tint for fills
+    .text_on_accent = "#ffffff",
+    .icon_dim = "#525252",
+    .icon_hover = "#1a1a1a",
+    .positive = "#15803d",     // emerald-700 (darker than Obsidian's 600)
+    .positive_dim = "#bbf7d0",
+    .negative = "#b91c1c",     // red-700
+    .negative_dim = "#fecaca",
+    .warning = "#a16207",      // amber-700 (matches accent family)
+    .info = "#1d4ed8",         // blue-700
+    .cyan = "#0e7490",         // cyan-700
+    .accent_bg = "#fef3c7",    // amber-100 — translucent accent
+    .positive_bg = "#dcfce7",  // emerald-100
+    .negative_bg = "#fee2e2",  // red-100
+    .row_alt = "#faf9f5",      // very subtle warm tint
+    .font_family = "'Consolas','Courier New',monospace",
+    .font_size_base = 14,
+    .chart_colors = {"#b45309", "#0e7490", "#15803d", "#b91c1c", "#1d4ed8", "#a16207"},
+};
+
 ThemeManager::ThemeManager() : QObject(nullptr), current_(THEME_OBSIDIAN) {}
 
 ThemeManager& ThemeManager::instance() {
@@ -113,8 +157,14 @@ QStringList ThemeManager::build_font_chain(const QString& preferred) {
     return chain;
 }
 
-void ThemeManager::apply_theme(const QString& /*name*/) {
-    current_ = THEME_OBSIDIAN;
+void ThemeManager::apply_theme(const QString& name) {
+    // Two built-in themes — Obsidian (dark, default) and Parchment (light).
+    // Match case-insensitively so both "Parchment" and "parchment" work, and
+    // so historical "Obsidian" callers keep functioning.
+    if (name.compare("Parchment", Qt::CaseInsensitive) == 0)
+        current_ = THEME_PARCHMENT;
+    else
+        current_ = THEME_OBSIDIAN;
     rebuild_and_apply();
 }
 

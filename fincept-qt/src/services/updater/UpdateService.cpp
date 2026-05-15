@@ -219,7 +219,7 @@ void UpdateService::on_manifest_reply_finished() {
                  QString("Already up to date — local=%1, remote=%2").arg(local_version, remote_version));
         if (!silent_) {
             QMessageBox::information(
-                dialog_parent(), QStringLiteral("Fincept Terminal"),
+                dialog_parent(), QStringLiteral("Pinpunch Terminal"),
                 QStringLiteral("You're running the latest version (%1).").arg(local_version));
         }
         finish_check(false);
@@ -232,7 +232,7 @@ void UpdateService::on_manifest_reply_finished() {
 
     // Prompt the user. Include changelog if present. Always offer a "view release
     // notes" escape hatch via open-url so users can read more before installing.
-    QString prompt = QStringLiteral("A new version of Fincept Terminal is available.\n\n"
+    QString prompt = QStringLiteral("A new version of Pinpunch Terminal is available.\n\n"
                                     "Current version: %1\nLatest version:  %2\n\n")
                          .arg(local_version, remote_version);
     if (!changelog.isEmpty()) {
@@ -426,7 +426,7 @@ void UpdateService::finish_check(bool update_found) {
 }
 
 void UpdateService::show_error(const QString& text) {
-    QMessageBox::warning(dialog_parent(), QStringLiteral("Fincept Terminal"), text);
+    QMessageBox::warning(dialog_parent(), QStringLiteral("Pinpunch Terminal"), text);
 }
 
 } // namespace fincept::services

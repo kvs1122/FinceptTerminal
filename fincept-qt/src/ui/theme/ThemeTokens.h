@@ -61,8 +61,11 @@ struct ThemeTokens {
 };
 
 // ---------------------------------------------------------------------------
-// Built-in theme preset — defined in ThemeManager.cpp
+// Built-in theme presets — defined in ThemeManager.cpp
+//   THEME_OBSIDIAN  — dark (default; original Pinpunch palette)
+//   THEME_PARCHMENT — light (warm off-white surface, dark slate text)
 // ---------------------------------------------------------------------------
 extern const ThemeTokens THEME_OBSIDIAN;
+extern const ThemeTokens THEME_PARCHMENT;
 
 } // namespace fincept::ui

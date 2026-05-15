@@ -44,7 +44,7 @@ CrashRecoveryDialog::CrashRecoveryDialog(fincept::CrashRecovery* recovery,
                                          fincept::WorkspaceSnapshotRing* ring,
                                          QWidget* parent)
     : QDialog(parent), recovery_(recovery), ring_(ring) {
-    setWindowTitle(QStringLiteral("Fincept Terminal — Recover Previous Session"));
+    setWindowTitle(QStringLiteral("Pinpunch Terminal — Recover Previous Session"));
     setObjectName(QStringLiteral("CrashRecoveryDialog"));
     setModal(true);
     resize(640, 480);

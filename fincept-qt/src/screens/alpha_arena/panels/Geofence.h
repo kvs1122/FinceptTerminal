@@ -6,7 +6,7 @@
 // screen.cpp itself so we can exercise it without instantiating Qt widgets.
 //
 // The function is *advisory* — final compliance responsibility remains with
-// the user. Build with -DFINCEPT_UNSAFE_DISABLE_GEOFENCE=ON to bypass for
+// the user. Build with -DPINPUNCH_UNSAFE_DISABLE_GEOFENCE=ON to bypass for
 // development; release builds must leave the flag OFF.
 
 #include <QLocale>

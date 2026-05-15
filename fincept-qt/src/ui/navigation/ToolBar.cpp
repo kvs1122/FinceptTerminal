@@ -1,6 +1,7 @@
 ﻿#include "ui/navigation/ToolBar.h"
 
 #include "auth/AuthManager.h"
+#include "storage/repositories/SettingsRepository.h"
 #include "ui/pushpins/PushpinBar.h"
 #include "ui/theme/Theme.h"
 #include "ui/theme/ThemeManager.h"
@@ -79,7 +80,7 @@ ToolBar::ToolBar(QWidget* parent) : QWidget(parent) {
     };
 
     sep();
-    fincept_label_ = mk("FINCEPT ");
+    fincept_label_ = mk("PINPUNCH ");
     hl->addWidget(fincept_label_);
     branding_label_ = mk("TERMINAL");
     hl->addWidget(branding_label_);
@@ -132,10 +133,43 @@ ToolBar::ToolBar(QWidget* parent) : QWidget(parent) {
     hl->addWidget(chat_mode_btn_);
     sep();
 
-    logout_btn_ = new QPushButton("LOGOUT");
+    // Theme toggle — flips between Obsidian (dark) and Parchment (light).
+    // Single-click toggle; persisted to SettingsRepository so the choice
+    // sticks across launches. Label shows the destination theme so the
+    // user knows what they'd switch TO.
+    {
+        auto& tm = ui::ThemeManager::instance();
+        const bool is_dark_now = tm.current_theme_name().compare(
+                                    "Parchment", Qt::CaseInsensitive) != 0;
+        theme_toggle_btn_ = new QPushButton(is_dark_now ? "☀ LIGHT" : "☾ DARK");
+        theme_toggle_btn_->setFixedHeight(20);
+        theme_toggle_btn_->setCursor(Qt::PointingHandCursor);
+        theme_toggle_btn_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        theme_toggle_btn_->setToolTip("Switch theme (dark ⇄ light)");
+        connect(theme_toggle_btn_, &QPushButton::clicked, this, [this]() {
+            auto& tm = ui::ThemeManager::instance();
+            const bool dark_now = tm.current_theme_name().compare(
+                                      "Parchment", Qt::CaseInsensitive) != 0;
+            const QString next = dark_now ? "Parchment" : "Obsidian";
+            tm.apply_theme(next);
+            // Persist so the choice survives restart. Repository writes are
+            // cheap; no need to debounce on a one-shot click.
+            fincept::SettingsRepository::instance().set(
+                "appearance.theme", next, "appearance");
+            theme_toggle_btn_->setText(next == "Parchment" ? "☾ DARK" : "☀ LIGHT");
+        });
+        hl->addWidget(theme_toggle_btn_);
+    }
+    sep();
+
+    // Renamed from LOGOUT — Pinpunch is local-only, no Fincept session to
+    // terminate. The signal name is kept (logout_clicked) but WindowFrame
+    // rewires it to a clean app shutdown (window().close()).
+    logout_btn_ = new QPushButton("EXIT");
     logout_btn_->setFixedHeight(20);
     logout_btn_->setCursor(Qt::PointingHandCursor);
     logout_btn_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    logout_btn_->setToolTip("Quit Pinpunch Terminal");
     connect(logout_btn_, &QPushButton::clicked, this, &ToolBar::logout_clicked);
     hl->addWidget(logout_btn_);
 
@@ -189,6 +223,13 @@ void ToolBar::refresh_theme() {
                                           .arg(colors::AMBER())
                                           .arg(colors::AMBER_DIM())
                                           .arg(colors::TEXT_PRIMARY()));
+    if (theme_toggle_btn_)
+        theme_toggle_btn_->setStyleSheet(QString("QPushButton{background:transparent;color:%1;border:1px solid %2;"
+                                                 "padding:0 8px;font-weight:700;}"
+                                                 "QPushButton:hover{background:%2;color:%3;border-color:%1;}")
+                                             .arg(colors::TEXT_SECONDARY())
+                                             .arg(colors::BORDER_DIM())
+                                             .arg(colors::TEXT_PRIMARY()));
     if (logout_btn_)
         logout_btn_->setStyleSheet(QString("QPushButton{background:transparent;color:%1;border:1px solid %1;"
                                            "padding:0 8px;font-weight:700;}"

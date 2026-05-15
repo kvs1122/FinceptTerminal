@@ -53,9 +53,10 @@ QString LlmService::get_models_url(const QString& provider, const QString& api_k
     if (p == "groq")       return "https://api.groq.com/openai/v1/models";
     if (p == "deepseek")   return "https://api.deepseek.com/models";
     if (p == "openrouter") return "https://openrouter.ai/api/v1/models";
-    if (p == "xai")     return "https://api.x.ai/v1/models";
-    if (p == "kimi")    return "https://api.moonshot.ai/v1/models";
-    if (p == "fincept") return "https://api.fincept.in/research/llm/models";
+    if (p == "xai")      return "https://api.x.ai/v1/models";
+    if (p == "cerebras") return "https://api.cerebras.ai/v1/models";
+    if (p == "kimi")     return "https://api.moonshot.ai/v1/models";
+    if (p == "fincept")  return "https://api.fincept.in/research/llm/models";  // Pinpunch hides this provider in the picker — kept for old DBs
     // minimax has no public /v1/models — caller falls back to known models.
     return {};
 }

@@ -14,6 +14,8 @@
 #include <QResizeEvent>
 #include <QtConcurrent>
 
+#include <cmath>
+
 namespace fincept::screens {
 
 static constexpr int    kItemSpacing      = 40;
@@ -40,13 +42,49 @@ TickerBar::TickerBar(QWidget* parent) : QWidget(parent) {
                 update();
             });
 
+    // Time-based scroll with stutter-spreading catch-up.
+    //
+    // The main thread blocks for ~100ms every second when the realtime bot
+    // refresh tick (account / positions / risk / watchlist) all callback
+    // at once. During that block no paint events fire. Naive elapsed-time
+    // advance would catch up the missed ~2px in a single frame after the
+    // unblock, which the eye reads as a "stop + jump". Instead we advance
+    // by the EXPECTED frame budget (16ms × 20 px/s ≈ 0.32px) and bank any
+    // excess into pending_catchup_, then drain ~25% of that bank each
+    // subsequent frame. Result: the marquee keeps moving continuously and
+    // accelerates briefly to swallow the lag, instead of freezing.
+    elapsed_.start();
+    last_advance_ms_ = elapsed_.elapsed();
     connect(&scroll_timer_, &QTimer::timeout, this, [this]() {
-        offset_ += 1.0;
+        const qint64 now = elapsed_.elapsed();
+        const qint64 dt  = now - last_advance_ms_;
+        last_advance_ms_ = now;
+        constexpr double kPxPerMs = 20.0 / 1000.0;        // 20 px/sec
+        constexpr qint64 kFrameBudgetMs = 16;             // ~60 Hz target
+        constexpr qint64 kMaxStutterMs  = 500;            // cap to avoid teleport on sleep/resume
+        const qint64 dt_clamped = std::min<qint64>(dt, kMaxStutterMs);
+
+        // Advance by at most one frame's worth this tick — bank the rest.
+        const qint64 frame_dt = std::min<qint64>(dt_clamped, kFrameBudgetMs);
+        offset_         += frame_dt * kPxPerMs;
+        pending_catchup_ += (dt_clamped - frame_dt) * kPxPerMs;
+
+        // Drain ~25% of the catch-up bank per frame so a 100ms stutter
+        // gets absorbed over ~5 frames (~80ms perceived) instead of in
+        // one visible jump.
+        if (pending_catchup_ > 0) {
+            const double drain = std::max(0.05, pending_catchup_ * 0.25);
+            const double take  = std::min(drain, pending_catchup_);
+            offset_         += take;
+            pending_catchup_ -= take;
+        }
+
         if (total_width_ > 0 && offset_ >= total_width_)
-            offset_ = 0;
+            offset_ = std::fmod(offset_, total_width_);
         update();
     });
-    scroll_timer_.setInterval(50); // 20fps — started by showEvent (P3)
+    scroll_timer_.setInterval(16); // ~60 Hz — actual advance is time-based,
+                                   // tighter interval just smooths sampling
 
     // ── Inline edit overlay (hidden by default) ───────────────────────────────
     edit_bar_ = new QWidget(this);
@@ -141,8 +179,25 @@ void TickerBar::save_symbols() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 void TickerBar::set_data(const QVector<Entry>& entries) {
+    // Detect whether the actual symbol set or order changed. Price/change
+    // refreshes flow through here every ~1–2 s; resetting offset_ on every
+    // call made the marquee snap back to x=0 every refresh and look like it
+    // was stuck on the same symbols. We only want to restart the scroll
+    // when the LAYOUT actually changes (user edited the ticker symbol list
+    // or the universe was rebuilt).
+    bool layout_changed = (entries.size() != entries_.size());
+    if (!layout_changed) {
+        for (int i = 0; i < entries.size(); ++i) {
+            if (entries.at(i).symbol != entries_.at(i).symbol) {
+                layout_changed = true;
+                break;
+            }
+        }
+    }
+
     entries_ = entries;
-    offset_  = 0;
+    if (layout_changed)
+        offset_ = 0;
 
     // Cache total width — paintEvent runs every 50ms, no per-frame allocation.
     QFont font(ui::fonts::DATA_FAMILY(), ui::fonts::font_px(-2));
@@ -157,8 +212,18 @@ void TickerBar::set_data(const QVector<Entry>& entries) {
         total_width_ += symbol_w + kSegmentGap + price_w + kSegmentGap + change_w + kItemSpacing;
     }
 
-    if (total_width_ > 0 && isVisible() && !edit_bar_->isVisible())
+    // Defensive wrap: if individual price-string widths shrank between
+    // refreshes (e.g. a 3-digit price became 2-digit) total_width_ may now
+    // be smaller than the current offset. Wrap so the marquee doesn't paint
+    // into the void waiting for offset to "catch up".
+    if (total_width_ > 0 && offset_ >= total_width_)
+        offset_ = std::fmod(offset_, total_width_);
+
+    if (total_width_ > 0 && isVisible() && !edit_bar_->isVisible()) {
+        last_advance_ms_ = elapsed_.elapsed();   // reset anchor before (re)start
+        pending_catchup_ = 0;                    // drop stale stutter bank
         scroll_timer_.start();
+    }
 
     update();
 }
@@ -169,8 +234,11 @@ void TickerBar::set_data(const QVector<Entry>& entries) {
 
 void TickerBar::showEvent(QShowEvent* event) {
     QWidget::showEvent(event);
-    if (total_width_ > 0)
+    if (total_width_ > 0) {
+        last_advance_ms_ = elapsed_.elapsed();
+        pending_catchup_ = 0;
         scroll_timer_.start();
+    }
 }
 
 void TickerBar::hideEvent(QHideEvent* event) {
@@ -219,8 +287,11 @@ void TickerBar::show_edit_bar() {
 
 void TickerBar::hide_edit_bar() {
     edit_bar_->hide();
-    if (total_width_ > 0 && isVisible())
+    if (total_width_ > 0 && isVisible()) {
+        last_advance_ms_ = elapsed_.elapsed();
+        pending_catchup_ = 0;
         scroll_timer_.start();
+    }
 }
 
 void TickerBar::commit_edit() {

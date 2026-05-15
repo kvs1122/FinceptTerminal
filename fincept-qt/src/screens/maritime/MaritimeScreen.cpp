@@ -292,10 +292,10 @@ QWidget* MaritimeScreen::build_top_bar() {
     hl->setContentsMargins(12, 0, 12, 0);
     hl->setSpacing(12);
 
-    brand_label_ = new QLabel("FINCEPT MARITIME INTELLIGENCE", bar);
+    brand_label_ = new QLabel("PINPUNCH MARITIME INTELLIGENCE", bar);
     hl->addWidget(brand_label_);
 
-    classified_label_ = new QLabel("VESSEL TRACKING // FINCEPT MARINE API", bar);
+    classified_label_ = new QLabel("VESSEL TRACKING // PINPUNCH MARINE API", bar);
     hl->addWidget(classified_label_);
 
     hl->addStretch(1);
@@ -1058,7 +1058,7 @@ void MaritimeScreen::on_health_loaded(QJsonObject payload) {
     const qint64 total   = d.value("database").toObject().value("total_records").toVariant().toLongLong();
 
     if (source_value_) {
-        const QString label = module.isEmpty() ? QStringLiteral("FINCEPT MARINE API") : module.toUpper();
+        const QString label = module.isEmpty() ? QStringLiteral("PINPUNCH MARINE API") : module.toUpper();
         const QString color = status == QStringLiteral("healthy")
                                   ? ui::colors::POSITIVE()
                                   : ui::colors::WARNING();

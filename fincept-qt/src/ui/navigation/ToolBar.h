@@ -48,6 +48,7 @@ class ToolBar : public QWidget {
     QLabel* live_label_ = nullptr;
     QPushButton* plan_btn_ = nullptr;
     QPushButton* chat_mode_btn_ = nullptr;
+    QPushButton* theme_toggle_btn_ = nullptr;
     QPushButton* logout_btn_ = nullptr;
     QTimer* clock_timer_ = nullptr;
     QVector<QLabel*> separators_;
