@@ -380,7 +380,14 @@ WindowFrame::WindowFrame(int window_id, QWidget* parent, const WindowId& adopted
         }
     });
 
-    connect(toolbar, &ui::ToolBar::chat_mode_toggled, this, &WindowFrame::toggle_chat_mode);
+    // CHAT button → toggle the floating AiChatBubble panel (Gemini-pinned
+    // in local-only mode). The original toggle_chat_mode path swapped into
+    // ChatModeScreen which talks to the Fincept-hosted /chat/agent/chat
+    // backend — non-functional with our empty AppConfig::api_base_url, so
+    // we route the button to the bubble instead.
+    connect(toolbar, &ui::ToolBar::chat_mode_toggled, this, [this]() {
+        if (chat_bubble_) chat_bubble_->toggle_panel();
+    });
     connect(toolbar, &ui::ToolBar::navigate_to, this, [this](const QString& id) {
         if (!locked_) dock_router_->navigate(id, true);
     });

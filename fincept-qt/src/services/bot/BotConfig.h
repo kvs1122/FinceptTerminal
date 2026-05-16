@@ -183,13 +183,14 @@ class BotConfig {
 
 // ─── Topic name constants (the public DataHub contract) ───────────────────
 namespace topics {
-    inline constexpr const char* kAccount      = "bot:account";
-    inline constexpr const char* kPositions    = "bot:positions";
-    inline constexpr const char* kTradesToday  = "bot:trades_today";
-    inline constexpr const char* kWatchlist    = "bot:watchlist";
-    inline constexpr const char* kNews         = "bot:news";
-    inline constexpr const char* kRisk         = "bot:risk";
-    inline constexpr const char* kMarket       = "bot:market";
+    inline constexpr const char* kAccount        = "bot:account";
+    inline constexpr const char* kPositions      = "bot:positions";
+    inline constexpr const char* kTradesToday    = "bot:trades_today";
+    inline constexpr const char* kWatchlist      = "bot:watchlist";
+    inline constexpr const char* kNews           = "bot:news";
+    inline constexpr const char* kRisk           = "bot:risk";
+    inline constexpr const char* kMarket         = "bot:market";
+    inline constexpr const char* kMarketContext  = "market:context";
 }
 
 } // namespace fincept::services::bot

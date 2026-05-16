@@ -60,6 +60,7 @@ void BotService::register_metatypes() {
     qRegisterMetaType<QVector<BotGateBlock>>("QVector<BotGateBlock>");
     qRegisterMetaType<BotRiskState>("BotRiskState");
     qRegisterMetaType<BotMarketState>("BotMarketState");
+    qRegisterMetaType<MarketContextItem>("MarketContextItem");
 }
 
 // ─── Singleton + lifecycle ────────────────────────────────────────────────

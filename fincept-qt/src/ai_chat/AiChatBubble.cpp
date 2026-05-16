@@ -15,22 +15,39 @@
 #include "ai_chat/AiChatBubble.h"
 
 #include "ai_chat/ChatBubbleFactory.h"
+#include "datahub/DataHub.h"
+#include "services/bot/BotConfig.h"
+#include "services/bot/BotTypes.h"
+#include "services/markets/MarketDataService.h"
 #include "services/stt/SpeechService.h"
 #include "services/tts/TtsService.h"
 #include "services/voice_trigger/ClapDetectorService.h"
+#include "storage/repositories/LlmConfigRepository.h"
 #include "ui/theme/Theme.h"
 #include "ui/theme/ThemeManager.h"
 
 #include <QDateTime>
 #include <QEvent>
+#include <QEventLoop>
 #include <QGraphicsOpacityEffect>
 #include <QHBoxLayout>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
 #include <QLabel>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QPointer>
 #include <QPropertyAnimation>
 #include <QRegularExpression>
 #include <QResizeEvent>
 #include <QScrollBar>
+#include <QTimeZone>
+#include <QTimer>
 #include <QUrl>
+#include <QtConcurrent>
 
 #include <algorithm>
 #include <memory>
@@ -453,6 +470,18 @@ void AiChatBubble::open_panel() {
     render_status();
 }
 
+void AiChatBubble::toggle_panel() {
+    // Force the whole bubble widget visible — the user may have hidden it
+    // via the appearance.show_chat_bubble setting; clicking the toolbar
+    // CHAT button is an explicit "I want this now" so we override that.
+    setVisible(true);
+    raise();
+    if (is_open_)
+        close_panel();
+    else
+        open_panel();
+}
+
 void AiChatBubble::close_panel() {
     is_open_ = false;
     // Voice mode running while the panel is hidden is confusing — turn it off.
@@ -526,6 +555,209 @@ void AiChatBubble::on_send() {
     // Defer streaming bubble creation to the first non-empty chunk.
     QPointer<AiChatBubble> self = this;
     auto first_chunk = std::make_shared<bool>(true);
+
+    // ── Path A: pinned-Gemini direct call ─────────────────────────────
+    //
+    // If the user has a saved `gemini` provider in LlmConfigRepository,
+    // route the bubble through Gemini regardless of which provider is
+    // currently "active" in LlmService. This lets the AI Chat tab keep
+    // using a heavier model (e.g. Cerebras qwen-3-235b) while the
+    // floating bubble stays on Gemini's free tier — same intent as the
+    // WHY MARKETS ARE MOVING widget in MarketPulsePanel.
+    //
+    // Trade-off: the direct path is BLOCKING (no token-by-token stream)
+    // and bypasses MCP tool calling. Operator-actionable prompts like
+    // "add NVDA to my watchlist" should be sent from the full AI Chat
+    // tab, which still uses the active provider with tools enabled.
+    QString gemini_key, gemini_model, gemini_base_url;
+    {
+        auto rows = fincept::LlmConfigRepository::instance().list_providers();
+        if (rows.is_ok()) {
+            for (const auto& r : rows.value()) {
+                if (r.provider.toLower() == "gemini" && !r.api_key.isEmpty()) {
+                    gemini_key      = r.api_key;
+                    gemini_model    = r.model.isEmpty()
+                                          ? QStringLiteral("gemini-2.5-flash")
+                                          : r.model;
+                    gemini_base_url = r.base_url;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!gemini_key.isEmpty()) {
+        // ── Live market context block ─────────────────────────────────
+        // Gemini's training cutoff means it doesn't know what "today" is
+        // or what the S&P just did. Without this, prompts like "why is
+        // the market deep red today?" return generic textbook answers
+        // about red markets in general. Pull the latest cached macro
+        // snapshots (BotIndicesService keeps these fresh) plus the most
+        // recent MarketContextService narrative if we have one, and
+        // prepend everything as a [SYSTEM CONTEXT] block. Stale or
+        // missing entries are simply omitted — Gemini handles partial
+        // context gracefully.
+        QString context_block;
+        {
+            auto& hub = fincept::datahub::DataHub::instance();
+            const QDateTime now_et =
+                QDateTime::currentDateTimeUtc().toTimeZone(QTimeZone("America/New_York"));
+            context_block += "[SYSTEM CONTEXT — current US market state, do NOT repeat verbatim]\n";
+            context_block += "Current time (ET): " + now_et.toString("yyyy-MM-dd HH:mm") + "\n\n";
+
+            struct Probe { const char* sym; const char* label; };
+            static const Probe kProbes[] = {
+                {"^GSPC",     "S&P 500"},
+                {"^DJI",      "Dow Jones"},
+                {"^IXIC",     "Nasdaq Comp"},
+                {"^RUT",      "Russell 2000"},
+                {"^VIX",      "VIX"},
+                {"^TNX",      "10Y Treasury yield"},
+                {"DX-Y.NYB",  "DXY (dollar index)"},
+                {"GC=F",      "Gold"},
+                {"CL=F",      "WTI Oil"},
+                {"BTC-USD",   "BTC-USD"},
+            };
+            QString lines;
+            for (const auto& p : kProbes) {
+                const QVariant v = hub.peek(QStringLiteral("market:quote:") + p.sym);
+                if (!v.isValid() || !v.canConvert<services::QuoteData>()) continue;
+                const auto q = v.value<services::QuoteData>();
+                lines += QString::asprintf("  %-22s %10.2f   %s%.2f%%\n",
+                    p.label, q.price, q.change_pct >= 0 ? "+" : "", q.change_pct);
+            }
+            if (!lines.isEmpty()) {
+                context_block += "Latest snapshot vs previous close:\n" + lines + "\n";
+            }
+
+            // Pull the latest MarketContextService narrative (hourly LLM
+            // summary). Off-hours this is the "weekly close" placeholder
+            // — still useful as a temporal anchor.
+            const QVariant ctx_v = hub.peek(
+                QString::fromUtf8(services::bot::topics::kMarketContext));
+            if (ctx_v.isValid() && ctx_v.canConvert<services::bot::MarketContextItem>()) {
+                const auto ctx = ctx_v.value<services::bot::MarketContextItem>();
+                if (!ctx.narrative.isEmpty()) {
+                    context_block += "Most recent hourly narrative:\n" + ctx.narrative + "\n\n";
+                }
+            }
+            context_block += "[END SYSTEM CONTEXT]\n\n";
+        }
+
+        // Build a single combined prompt from context + history + new user turn.
+        // Gemini's API is stateless per call — we need to flatten the
+        // conversation. Tools are intentionally NOT advertised here.
+        QString combined = context_block;
+        for (const auto& msg : chat_history_) {
+            // chat_history_ already includes the just-appended user turn.
+            combined += (msg.role == "user" ? "User: " : "Assistant: ");
+            combined += msg.content + "\n\n";
+        }
+
+        QString endpoint;
+        if (!gemini_base_url.trimmed().isEmpty()) {
+            QString b = gemini_base_url.trimmed();
+            if (b.endsWith('/')) b.chop(1);
+            endpoint = b + "/v1beta/models/" + gemini_model + ":generateContent";
+        } else {
+            endpoint = "https://generativelanguage.googleapis.com/v1beta/models/"
+                       + gemini_model + ":generateContent";
+        }
+
+        const QString key = gemini_key;
+        const QString model = gemini_model;
+        const QString url   = endpoint;
+
+        (void)QtConcurrent::run([self, combined, key, model, url, first_chunk]() {
+            // Background-thread blocking POST. Own QNAM because Qt's QNAM
+            // is thread-affine to its creating thread — using a main-thread
+            // QNAM from here would deadlock the QEventLoop wait.
+            QNetworkAccessManager local_nam;
+            QJsonObject body;
+            QJsonArray contents;
+            QJsonObject content;
+            content["role"] = "user";
+            QJsonArray parts;
+            QJsonObject part;
+            part["text"] = combined;
+            parts.append(part);
+            content["parts"] = parts;
+            contents.append(content);
+            body["contents"] = contents;
+            QJsonObject gen_cfg;
+            gen_cfg["temperature"] = 0.7;
+            gen_cfg["maxOutputTokens"] = 2048;
+            body["generationConfig"] = gen_cfg;
+
+            QNetworkRequest req((QUrl(url)));
+            req.setRawHeader("x-goog-api-key", key.toUtf8());
+            req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+            req.setHeader(QNetworkRequest::UserAgentHeader, "Pinpunch/4.0.3 (ChatBubble)");
+            req.setAttribute(QNetworkRequest::Http2AllowedAttribute, true);
+            QNetworkReply* reply = local_nam.post(req,
+                QJsonDocument(body).toJson(QJsonDocument::Compact));
+            QEventLoop loop;
+            QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+            QTimer::singleShot(60'000, &loop, &QEventLoop::quit);
+            loop.exec();
+
+            const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            const QByteArray bytes = reply->readAll();
+            const auto err_kind = reply->error();
+            reply->deleteLater();
+
+            QString text;
+            QString err;
+            if (err_kind != QNetworkReply::NoError && status == 0) {
+                err = "Network error: " + reply->errorString();
+            } else if (status >= 400) {
+                err = QString("HTTP %1: %2").arg(status).arg(QString::fromUtf8(bytes.left(220)));
+            } else {
+                QJsonParseError pe;
+                const QJsonDocument doc = QJsonDocument::fromJson(bytes, &pe);
+                if (pe.error != QJsonParseError::NoError) {
+                    err = "Parse: " + pe.errorString();
+                } else {
+                    const QJsonArray cands = doc.object().value("candidates").toArray();
+                    if (cands.isEmpty()) {
+                        err = "Gemini returned no candidates";
+                    } else {
+                        const QJsonObject c = cands.first().toObject().value("content").toObject();
+                        for (const auto& p : c.value("parts").toArray()) {
+                            text += p.toObject().value("text").toString();
+                        }
+                        if (text.trimmed().isEmpty())
+                            err = "Gemini returned empty text";
+                    }
+                }
+            }
+
+            const QString final_text = err.isEmpty()
+                ? text
+                : QStringLiteral("(Gemini error: %1)").arg(err.left(180));
+
+            // Marshal back to UI thread. Synthesise the same chunk-callback
+            // contract chat_streaming uses so the existing render path
+            // doesn't need to change: one big chunk, done=true.
+            QMetaObject::invokeMethod(qApp, [self, final_text, first_chunk]() {
+                if (!self) return;
+                if (*first_chunk) {
+                    *first_chunk = false;
+                    self->streaming_bubble_ = self->add_streaming_bubble();
+                }
+                self->on_stream_chunk(final_text, true);
+                // Replicate what finished_streaming would do — flip flags
+                // and re-enable input.
+                ai_chat::LlmResponse synth;
+                synth.success = !final_text.startsWith("(Gemini error:");
+                synth.content = final_text;
+                self->on_streaming_done(synth);
+            }, Qt::QueuedConnection);
+        });
+        return;   // skip the LlmService path
+    }
+
+    // ── Path B: fall back to active LlmService provider ───────────────
     // ToolPolicy::NoNavigation — the floating bubble lets the model use tools
     // (so "add SPGI to my watchlist" works), but hides the `navigation`
     // category so the model can't yank the user out of their current screen

@@ -102,6 +102,11 @@ void BotPositionsWidget::hub_unsubscribe_all() {
 
 void BotPositionsWidget::render(const QVector<services::bot::BotPosition>& rows) {
     set_loading(false);
+    // Surface the open-position count in the title so the operator
+    // doesn't have to count rows to sanity-check against Alpaca.
+    set_title(rows.isEmpty()
+        ? QStringLiteral("BOT POSITIONS")
+        : QString("BOT POSITIONS  ·  %1 OPEN").arg(rows.size()));
     // Toggle between empty-state message and the table.
     if (rows.isEmpty()) {
         stack_->setCurrentWidget(empty_);

@@ -94,6 +94,14 @@ void BotWatchlistWidget::hub_unsubscribe_all() {
 
 void BotWatchlistWidget::render(const QVector<services::bot::BotWatchlistItem>& rows) {
     set_loading(false);
+    // Surface the live count in the title so the operator can sanity-check
+    // against the bot's Telegram pings ("Watchlist refreshed: N tickers").
+    // The bot's state.watchlist trims through the day as positions
+    // open/close, gap-fades complete, scores decay, etc., so the count here
+    // will be smaller than the premarket peak Telegram reported.
+    set_title(rows.isEmpty()
+        ? QStringLiteral("BOT WATCHLIST")
+        : QString("BOT WATCHLIST  ·  %1 SYMBOLS").arg(rows.size()));
     if (rows.isEmpty()) {
         stack_->setCurrentWidget(empty_);
         table_->setRowCount(0);

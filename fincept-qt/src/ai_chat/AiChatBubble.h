@@ -40,6 +40,12 @@ class AiChatBubble : public QWidget {
     /// Call from the parent's resizeEvent to reposition the bubble + panel.
     void reposition();
 
+    /// Toggle the chat panel open/closed. Called by the toolbar CHAT button
+    /// — replaces the old fullscreen ChatModeScreen path which depended on
+    /// the Fincept-hosted /chat/agent/chat backend (broken in local-only
+    /// mode). Also forces the bubble widget visible if a setting hid it.
+    void toggle_panel();
+
   protected:
     bool eventFilter(QObject* obj, QEvent* e) override;
 

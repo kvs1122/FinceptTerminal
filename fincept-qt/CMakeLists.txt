@@ -926,6 +926,7 @@ set(SERVICE_SOURCES
     src/services/bot/PolygonRestClient.cpp
     src/services/bot/BotEconCalendarService.cpp
     src/services/bot/BotIndicesService.cpp
+    src/services/bot/MarketContextService.cpp
     src/services/news/NewsService.cpp
     src/services/news/NewsClusterService.cpp
     src/services/news/NewsMonitorService.cpp

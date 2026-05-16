@@ -40,6 +40,7 @@
 #include "services/bot/BotService.h"   // Pinpunch ↔ grok-claude bot integration
 #include "services/bot/BotEconCalendarService.h"  // FMP/Finnhub economic calendar
 #include "services/bot/BotIndicesService.h"        // Alpaca ETF-proxy global indices
+#include "services/bot/MarketContextService.h"     // hourly LLM market narrative
 #include "services/options/FiiDiiService.h"
 #include "services/options/OISnapshotter.h"
 #include "services/options/OptionChainService.h"
@@ -383,6 +384,16 @@ int main(int argc, char* argv[]) {
         hub.set_policy(QStringLiteral("econ:fincept:upcoming_events"), hourly);
         // Force one fetch right now so the panel paints during this session.
         econ.refresh({ QStringLiteral("econ:fincept:upcoming_events") });
+
+        // ── Market context narrative (LLM-generated, hourly) ──────────
+        // Hourly "why are markets moving" summary, gated to Sun 20:00 ET
+        // → Fri 20:00 ET. Reads macro snapshots from the DataHub cache
+        // (BotIndicesService populates them) + Finnhub headlines, sends
+        // to the active LlmService provider (Gemini recommended). Topic
+        // policy mirrors the econ calendar — at-most-hourly.
+        auto& mctx = fincept::services::bot::MarketContextService::instance();
+        hub.register_producer(&mctx);
+        hub.set_policy(QStringLiteral("market:context"), hourly);
 
         // ── Universal market quotes (Alpaca + yfinance) ────────────────
         // Hijacks the entire `market:quote:*` topic family. Smart per-

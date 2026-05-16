@@ -2,6 +2,7 @@
 
 #include "screens/dashboard/widgets/LoadingOverlay.h"
 #include "services/bot/BotConfig.h"
+#include "services/bot/MarketContextService.h"
 #include "services/bot/PolygonRestClient.h"
 #include "services/markets/MarketDataService.h"
 #include "ui/theme/Theme.h"
@@ -128,6 +129,7 @@ MarketPulsePanel::MarketPulsePanel(QWidget* parent) : QWidget(parent) {
     cl->addWidget(build_losers_section());
     cl->addWidget(build_global_snapshot_section());
     cl->addWidget(build_market_hours_section());
+    cl->addWidget(build_market_context_section());
     cl->addWidget(build_ticker_search_section());
     cl->addStretch();
 
@@ -205,6 +207,8 @@ void MarketPulsePanel::refresh_theme() {
     style_section(sh_losers_, ui::colors::NEGATIVE());
     style_section(sh_snapshot_, ui::colors::INFO());
     style_section(sh_hours_, ui::colors::WARNING());
+    style_section(sh_context_, ui::colors::AMBER());   // WHY MARKETS ARE MOVING
+    style_section(sh_lookup_,  ui::colors::AMBER());   // TICKER LOOKUP
 
     // ── Fear & Greed ──
     if (fg_header_label_)
@@ -374,6 +378,10 @@ QWidget* MarketPulsePanel::build_section_header(const QString& title, const QStr
         sh = &sh_snapshot_;
     else if (title == "MARKET HOURS")
         sh = &sh_hours_;
+    else if (title == "WHY MARKETS ARE MOVING")
+        sh = &sh_context_;
+    else if (title == "TICKER LOOKUP")
+        sh = &sh_lookup_;
 
     if (sh) {
         sh->container = w;
@@ -989,6 +997,19 @@ void MarketPulsePanel::hub_subscribe_all() {
             update_loading_progress();
         });
     }
+
+    // Subscribe to the hourly market-context narrative (separate topic,
+    // separate producer). Falls through `peek()` first so the widget
+    // shows the cached narrative before the producer's next tick.
+    const QString ctx_topic = QString::fromUtf8(services::bot::topics::kMarketContext);
+    hub.subscribe(this, ctx_topic, [this](const QVariant& v) {
+        if (!v.canConvert<services::bot::MarketContextItem>()) return;
+        render_market_context(v.value<services::bot::MarketContextItem>());
+    });
+    auto cached_ctx = hub.peek(ctx_topic);
+    if (cached_ctx.isValid() && cached_ctx.canConvert<services::bot::MarketContextItem>())
+        render_market_context(cached_ctx.value<services::bot::MarketContextItem>());
+
     hub_active_ = true;
 }
 
@@ -1093,8 +1114,9 @@ QWidget* MarketPulsePanel::build_ticker_search_section() {
     vl->setContentsMargins(8, 6, 8, 8);
     vl->setSpacing(4);
 
-    // Section header — match the others (icon char + title).
-    auto* hdr = build_section_header("TICKER LOOKUP", "?", ui::colors::AMBER());
+    // Section header — match the others (icon char + title). Magnifier
+    // glyph reads as "search" in any theme.
+    auto* hdr = build_section_header("TICKER LOOKUP", "⌕", ui::colors::AMBER());
     vl->addWidget(hdr);
 
     // Search row: input + button
@@ -1102,9 +1124,11 @@ QWidget* MarketPulsePanel::build_ticker_search_section() {
     row->setSpacing(4);
     search_input_ = new QLineEdit(w);
     search_input_->setPlaceholderText("TSLA or Tesla …");
+    // 10.5px to match every other row in Market Pulse — was 11px which
+    // made the input visually heavier than the Global Snapshot rows above.
     search_input_->setStyleSheet(QString(
         "QLineEdit{background:%1;color:%2;border:1px solid %3;"
-        " padding:3px 6px;font-size:11px;}"
+        " padding:3px 6px;font-size:10.5px;}"
         "QLineEdit:focus{border-color:%4;}")
         .arg(ui::colors::BG_SURFACE(), ui::colors::TEXT_PRIMARY(),
              ui::colors::BORDER_DIM(), ui::colors::AMBER()));
@@ -1118,6 +1142,25 @@ QWidget* MarketPulsePanel::build_ticker_search_section() {
         "QPushButton:hover{background:%3;}")
         .arg(ui::colors::AMBER(), ui::colors::BG_BASE(), ui::colors::BG_HOVER()));
     row->addWidget(search_btn_);
+
+    // Refresh button — re-runs the snapshot/details/52w/Finnhub chain for
+    // the currently-displayed ticker without re-resolving via search. Sits
+    // next to Search; disabled until a ticker has been resolved at least
+    // once. Glyph is the standard CSS-friendly clockwise-arrow circle so
+    // it reads as "refresh" in any theme.
+    search_refresh_ = new QPushButton("⟳", w);
+    search_refresh_->setCursor(Qt::PointingHandCursor);
+    search_refresh_->setEnabled(false);
+    search_refresh_->setToolTip("Refresh current ticker");
+    search_refresh_->setStyleSheet(QString(
+        "QPushButton{background:transparent;color:%1;border:1px solid %2;"
+        " padding:1px 8px;font-size:14px;font-weight:bold;}"
+        "QPushButton:hover{background:%3;color:%4;}"
+        "QPushButton:disabled{color:%5;border-color:%5;}")
+        .arg(ui::colors::TEXT_SECONDARY(), ui::colors::BORDER_DIM(),
+             ui::colors::BG_HOVER(), ui::colors::AMBER(),
+             ui::colors::TEXT_DIM()));
+    row->addWidget(search_refresh_);
     vl->addLayout(row);
 
     // Status label (hidden when empty) — used for "Searching…", errors,
@@ -1166,10 +1209,38 @@ QWidget* MarketPulsePanel::build_ticker_search_section() {
     search_result_box_->setVisible(false);
     vl->addWidget(search_result_box_);
 
-    QObject::connect(search_btn_,   &QPushButton::clicked, this, &MarketPulsePanel::on_search_submit);
-    QObject::connect(search_input_, &QLineEdit::returnPressed, this, &MarketPulsePanel::on_search_submit);
+    QObject::connect(search_btn_,     &QPushButton::clicked,    this, &MarketPulsePanel::on_search_submit);
+    QObject::connect(search_input_,   &QLineEdit::returnPressed, this, &MarketPulsePanel::on_search_submit);
+    QObject::connect(search_refresh_, &QPushButton::clicked,    this, &MarketPulsePanel::refresh_current_ticker);
 
     return w;
+}
+
+void MarketPulsePanel::refresh_current_ticker() {
+    // No-op until a ticker has been resolved at least once. Snapshot/52w/
+    // EPS get re-fetched WITHOUT going through the search-resolution step,
+    // so we don't risk re-resolving "TSLA" → wrong ETF on a flaky day. The
+    // generation counter still bumps to invalidate any stale callbacks
+    // from a prior search/refresh. We keep ticker + name visible while
+    // the new data lands so the panel doesn't flash "—".
+    if (current_search_.ticker.isEmpty()) return;
+    if (!services::bot::PolygonRestClient::instance().is_configured()) {
+        render_search_status(QStringLiteral("No Polygon API key — set POLYGON_API_KEY in ~/grok-claude/.env"),
+                             true);
+        return;
+    }
+    ++current_search_gen_;
+    // Reset only the data flags so render_search_result shows "—" for the
+    // refreshing fields until they re-arrive. Keep ticker/name pinned.
+    const QString ticker = current_search_.ticker;
+    const QString name   = current_search_.name;
+    current_search_ = SearchState{};
+    current_search_.ticker = ticker;
+    current_search_.name   = name;
+    render_search_status(QStringLiteral("Refreshing %1…").arg(ticker), false);
+    render_search_result();
+    start_polygon_chain(current_search_gen_);
+    fetch_finnhub_earnings(current_search_gen_, ticker);
 }
 
 void MarketPulsePanel::render_search_status(const QString& msg, bool error) {
@@ -1241,6 +1312,7 @@ void MarketPulsePanel::on_search_submit() {
                         current_search_.has_details = true;
                         render_search_status(QStringLiteral("Resolved → %1").arg(ticker), false);
                         search_result_box_->setVisible(true);
+                        if (search_refresh_) search_refresh_->setEnabled(true);
                         render_search_result();
                         // Snapshot + 52w + Finnhub still need to run; details
                         // already populated above so the redundant ticker_details
@@ -1298,6 +1370,7 @@ void MarketPulsePanel::start_fuzzy_search(qint64 gen, const QString& query) {
             }
             render_search_status(QStringLiteral("Resolved → %1").arg(current_search_.ticker), false);
             search_result_box_->setVisible(true);
+            if (search_refresh_) search_refresh_->setEnabled(true);
             render_search_result();
             start_polygon_chain(gen);
             fetch_finnhub_earnings(gen, current_search_.ticker);
@@ -1470,6 +1543,100 @@ void MarketPulsePanel::render_search_result() {
         sr_eps_surp_->setText(QStringLiteral("Surprise      —"));
         sr_eps_date_->setText(QStringLiteral("Period  —"));
     }
+}
+
+// ── WHY MARKETS ARE MOVING — hourly LLM narrative ────────────────────────
+//
+// Subscribes to `market:context`, produced by MarketContextService once
+// per hour during the active window (Sun 20:00 ET → Fri 20:00 ET). The
+// narrative summarizes the dominant macro driver — works for both up
+// and down moves. During off-hours the section shows a "weekly close"
+// placeholder. Manual refresh button calls back into the service.
+
+QWidget* MarketPulsePanel::build_market_context_section() {
+    auto* w = new QWidget(this);
+    w->setStyleSheet(QString("background:%1;").arg(ui::colors::BG_BASE()));
+    auto* vl = new QVBoxLayout(w);
+    vl->setContentsMargins(8, 6, 8, 8);
+    vl->setSpacing(4);
+
+    // Section header — sparkle glyph reads as "AI insight / narrative"
+    // in monochrome and matches the rest of the panel's icon style.
+    auto* hdr = build_section_header("WHY MARKETS ARE MOVING", "✦", ui::colors::AMBER());
+    vl->addWidget(hdr);
+
+    // Title row: "AI NARRATIVE" label + manual refresh button on the right.
+    auto* hdr_row = new QHBoxLayout;
+    hdr_row->setSpacing(4);
+    mctx_title_ = new QLabel("AI NARRATIVE", w);
+    mctx_title_->setStyleSheet(QString(
+        "color:%1;font-size:9px;font-weight:bold;letter-spacing:1px;"
+        "background:transparent;").arg(ui::colors::TEXT_TERTIARY()));
+    hdr_row->addWidget(mctx_title_, 1);
+
+    mctx_refresh_ = new QPushButton("⟳", w);
+    mctx_refresh_->setCursor(Qt::PointingHandCursor);
+    mctx_refresh_->setToolTip("Refresh narrative now");
+    mctx_refresh_->setFixedHeight(20);
+    mctx_refresh_->setStyleSheet(QString(
+        "QPushButton{background:transparent;color:%1;border:1px solid %2;"
+        " padding:0 6px;font-size:13px;font-weight:bold;}"
+        "QPushButton:hover{background:%3;color:%4;}")
+        .arg(ui::colors::TEXT_SECONDARY(), ui::colors::BORDER_DIM(),
+             ui::colors::BG_HOVER(), ui::colors::AMBER()));
+    QObject::connect(mctx_refresh_, &QPushButton::clicked, this, []() {
+        services::bot::MarketContextService::instance().refresh_now();
+    });
+    hdr_row->addWidget(mctx_refresh_);
+    vl->addLayout(hdr_row);
+
+    // Narrative body — same 10.5px size as VIX/US10Y/etc. above so it
+    // reads as a sibling section, not a heavier paragraph block. Subtle
+    // background tint instead of a hard border so the box doesn't look
+    // foreign next to the borderless Market Hours rows.
+    mctx_text_ = new QLabel("Loading…", w);
+    mctx_text_->setWordWrap(true);
+    mctx_text_->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::LinksAccessibleByMouse);
+    mctx_text_->setStyleSheet(QString(
+        "color:%1;font-size:10.5px;background:%2;"
+        " padding:6px 8px;line-height:1.45;").arg(
+            ui::colors::TEXT_PRIMARY(), ui::colors::BG_SURFACE()));
+    vl->addWidget(mctx_text_);
+
+    // Meta footer: "Updated 14:00 ET · Next 15:00 · Gemini 2.5 Flash"
+    mctx_meta_ = new QLabel("", w);
+    mctx_meta_->setStyleSheet(QString(
+        "color:%1;font-size:9px;background:transparent;").arg(ui::colors::TEXT_TERTIARY()));
+    vl->addWidget(mctx_meta_);
+
+    return w;
+}
+
+void MarketPulsePanel::render_market_context(const services::bot::MarketContextItem& item) {
+    if (!mctx_text_) return;
+
+    // Body — narrative or off-hours placeholder.
+    mctx_text_->setText(item.narrative.isEmpty()
+        ? QStringLiteral("(no narrative yet — first hourly tick pending)")
+        : item.narrative);
+
+    // Meta footer — timestamps + provider/model.
+    auto fmt_ts = [](qint64 secs) {
+        if (secs <= 0) return QStringLiteral("—");
+        return QDateTime::fromSecsSinceEpoch(secs).toString("HH:mm");
+    };
+    QString meta = "Updated " + fmt_ts(item.generated_at_secs);
+    if (item.next_update_secs > 0)
+        meta += "  ·  Next " + fmt_ts(item.next_update_secs);
+    if (!item.llm_provider.isEmpty()) {
+        meta += "  ·  ";
+        meta += item.llm_provider.toUpper();
+        if (!item.llm_model.isEmpty())
+            meta += " " + item.llm_model;
+    }
+    if (!item.in_active_window)
+        meta = "Weekly close · " + meta;
+    mctx_meta_->setText(meta);
 }
 
 } // namespace fincept::screens

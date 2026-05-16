@@ -150,6 +150,26 @@ struct BotMarketState {
     qint64  ts = 0;
 };
 
+// ─── Market context narrative (market:context, refresh ~1h) ───────────────
+// Hourly LLM-generated explanation of why US markets are moving today.
+// Built by MarketContextService from the union of:
+//   • macro snapshots from DataHub cache (^GSPC, ^TNX, ^VIX, DXY, gold,
+//     oil, BTC) — already populated by BotIndicesService
+//   • top general headlines from Finnhub /news?category=general (last 6h)
+// Sent to the active LlmService provider (Gemini recommended — free tier
+// is generous and Pinpunch is local-only). Falls back to raw headlines
+// when no LLM is configured.
+struct MarketContextItem {
+    QString narrative;             // 3-5 sentence LLM summary OR fallback
+    qint64  generated_at_secs = 0; // unix seconds
+    qint64  next_update_secs  = 0; // when the next hourly tick will fire
+    QString llm_provider;          // "gemini", "xai", "" if headlines-only
+    QString llm_model;             // empty when fallback
+    QStringList top_headlines;     // top 5 raw headlines (always populated)
+    bool    in_active_window = true;  // false → off-hours (Fri 8pm–Sun 8pm ET)
+    QString error;                 // empty on success
+};
+
 } // namespace fincept::services::bot
 
 // ── QVariant integration ──────────────────────────────────────────────────
@@ -170,3 +190,4 @@ Q_DECLARE_METATYPE(fincept::services::bot::BotGateBlock)
 Q_DECLARE_METATYPE(QVector<fincept::services::bot::BotGateBlock>)
 Q_DECLARE_METATYPE(fincept::services::bot::BotRiskState)
 Q_DECLARE_METATYPE(fincept::services::bot::BotMarketState)
+Q_DECLARE_METATYPE(fincept::services::bot::MarketContextItem)

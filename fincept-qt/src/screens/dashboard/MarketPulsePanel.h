@@ -1,4 +1,5 @@
 #pragma once
+#include "services/bot/BotTypes.h"
 #include "services/markets/MarketDataService.h"
 
 #include <QHash>
@@ -55,6 +56,7 @@ class MarketPulsePanel : public QWidget {
     QWidget* build_losers_section();
     QWidget* build_global_snapshot_section();
     QWidget* build_market_hours_section();
+    QWidget* build_market_context_section();
     QWidget* build_ticker_search_section();
     QWidget* build_mover_row(const QString& symbol, double change, const QString& volume);
     QWidget* build_stat_row(const QString& label, const QString& value, const QString& change, const QString& color);
@@ -91,6 +93,8 @@ class MarketPulsePanel : public QWidget {
     SectionHeader sh_losers_;
     SectionHeader sh_snapshot_;
     SectionHeader sh_hours_;
+    SectionHeader sh_context_;       // WHY MARKETS ARE MOVING
+    SectionHeader sh_lookup_;        // TICKER LOOKUP
 
     // ── Fear & Greed ──
     QLabel* fg_header_label_ = nullptr;
@@ -161,9 +165,10 @@ class MarketPulsePanel : public QWidget {
     // flight. Each search fans out 4 parallel HTTP calls (snapshot +
     // ticker details + 52w aggregates + finnhub earnings); fields render
     // as each completes.
-    QLineEdit*   search_input_  = nullptr;
-    QPushButton* search_btn_    = nullptr;
-    QLabel*      search_status_ = nullptr;     // "Searching…", error msg, etc.
+    QLineEdit*   search_input_   = nullptr;
+    QPushButton* search_btn_     = nullptr;
+    QPushButton* search_refresh_ = nullptr;     // re-fetches the currently-displayed ticker
+    QLabel*      search_status_  = nullptr;     // "Searching…", error msg, etc.
     QWidget*     search_result_box_ = nullptr; // shown when we have data
     QLabel*      sr_symbol_     = nullptr;     // "TSLA — Tesla, Inc."
     QLabel*      sr_price_      = nullptr;     // "$259.32 +1.42%"
@@ -195,6 +200,14 @@ class MarketPulsePanel : public QWidget {
     void start_polygon_chain(qint64 gen);
     void start_fuzzy_search(qint64 gen, const QString& query);
     void fetch_finnhub_earnings(qint64 gen, const QString& ticker);
+    void refresh_current_ticker();
+
+    // ── Market Context (LLM-generated narrative) ──
+    QLabel*      mctx_title_     = nullptr;
+    QLabel*      mctx_text_      = nullptr;
+    QLabel*      mctx_meta_      = nullptr;     // "Updated 14:00 · next 15:00 · Gemini"
+    QPushButton* mctx_refresh_   = nullptr;
+    void render_market_context(const services::bot::MarketContextItem& item);
 
     // Loading overlay shown over the scroll area while the union of the
     // breadth/movers/snapshot caches fills up. The denominator is the
