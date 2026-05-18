@@ -170,9 +170,14 @@ void MarketContextService::refresh(const QStringList& /*topics*/) {
 }
 
 void MarketContextService::refresh_now() {
-    // Manual button — bypasses the hourly timer but still respects the
+    // Manual button — bypasses the hourly timer AND clears any "in
+    // flight" guard from a stuck previous fetch. Still respects the
     // weekend gate (no point asking the LLM "why are markets moving?"
-    // on Saturday afternoon when the market is closed).
+    // on Saturday afternoon when the market is closed). A user click is
+    // an explicit "I want fresh data NOW" signal, so we force the
+    // attempt even if the deferred-startup tick is still pending.
+    fetch_in_flight_ = false;
+    mc_diag("refresh_now: user-triggered, clearing in_flight guard");
     if (in_active_window(QDateTime::currentDateTimeUtc())) start_fetch();
     else publish_off_hours();
 }
@@ -443,7 +448,11 @@ MarketContextService::GeminiResult MarketContextService::gemini_direct(
     body["contents"] = contents;
     QJsonObject gen_cfg;
     gen_cfg["temperature"] = 0.4;          // narrative needs a touch of creativity but stay grounded
-    gen_cfg["maxOutputTokens"] = 1024;
+    // 4096 budget so the model can think + produce. gemini-2.5-flash bills
+    // hidden "thinking" tokens against the same maxOutputTokens cap, and a
+    // dense macro + headlines prompt was burning 800+ of those before any
+    // visible text — narratives kept getting cut off mid-sentence at 1024.
+    gen_cfg["maxOutputTokens"] = 4096;
     body["generationConfig"] = gen_cfg;
 
     // Background-thread blocking POST via QEventLoop. We're already on
@@ -486,20 +495,30 @@ MarketContextService::GeminiResult MarketContextService::gemini_direct(
         return r;
     }
     // Gemini response shape:
-    //   { candidates: [{ content: { parts: [{text: "..."}], role:"model"}, ...}], ...}
+    //   { candidates: [{ content: { parts: [{text: "..."}], role:"model"},
+    //                    finishReason: "STOP"|"MAX_TOKENS"|"SAFETY"|..., ...}], ...}
     const QJsonArray cands = doc.object().value("candidates").toArray();
     if (cands.isEmpty()) {
         r.error = QStringLiteral("no candidates in response");
         return r;
     }
-    const QJsonObject parts_obj = cands.first().toObject().value("content").toObject();
+    const QJsonObject cand_obj  = cands.first().toObject();
+    const QString finish_reason = cand_obj.value("finishReason").toString();
+    const QJsonObject parts_obj = cand_obj.value("content").toObject();
     const QJsonArray parts_arr  = parts_obj.value("parts").toArray();
     QString text;
     for (const auto& p : parts_arr) {
         text += p.toObject().value("text").toString();
     }
+    // Surface a non-STOP finish reason in the diag log so truncations
+    // (MAX_TOKENS) or content filtering (SAFETY) are obvious post-hoc
+    // rather than discovered visually mid-sentence on the dashboard.
+    if (!finish_reason.isEmpty() && finish_reason != "STOP") {
+        mc_diag(QString("gemini finish_reason=%1 (text len=%2)")
+                    .arg(finish_reason).arg(text.size()));
+    }
     if (text.trimmed().isEmpty()) {
-        r.error = QStringLiteral("empty text in candidates");
+        r.error = QStringLiteral("empty text in candidates (finish_reason=%1)").arg(finish_reason);
         return r;
     }
     r.text = text;
