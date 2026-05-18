@@ -165,7 +165,7 @@ ContactScreen::ContactScreen(QWidget* parent) : QWidget(parent) {
 
         auto* github_btn = make_action("GitHub Issues");
         connect(github_btn, &QPushButton::clicked, this, []() {
-            QDesktopServices::openUrl(QUrl("https://github.com/Fincept-Corporation/FinceptTerminal/issues"));
+            QDesktopServices::openUrl(QUrl("https://github.com/Fincept-Corporation/PinpunchTerminal/issues"));
         });
         hl->addWidget(github_btn);
 

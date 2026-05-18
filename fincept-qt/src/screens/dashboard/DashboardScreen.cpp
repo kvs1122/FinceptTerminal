@@ -5,12 +5,18 @@
 #include "screens/dashboard/canvas/TemplatePicker.h"
 #include "screens/dashboard/canvas/WidgetRegistry.h"
 #include "screens/dashboard/widgets/BaseWidget.h"
+#include "services/bot/PolygonRestClient.h"
 #include "services/markets/MarketDataService.h"
 #include "services/notifications/NotificationService.h"
 #include "storage/repositories/SettingsRepository.h"
 #include "ui/theme/Theme.h"
 #include "ui/theme/ThemeManager.h"
 #include "ui/widgets/NotifToast.h"
+
+#include <QJsonArray>
+#include <QJsonObject>
+
+#include <algorithm>
 
 #    include "datahub/DataHub.h"
 #    include "datahub/DataHubMetaTypes.h"
@@ -59,8 +65,23 @@ DashboardScreen::DashboardScreen(QWidget* parent) : QWidget(parent) {
     // ── Scrolling Ticker Bar ──
     ticker_bar_ = new TickerBar;
     vl->addWidget(ticker_bar_);
-    // When user saves a new symbol list, re-fetch quotes immediately.
+    // When the symbol list changes (user edit OR top-movers rotation),
+    // re-fetch quotes immediately so the bar reflects the new universe.
     connect(ticker_bar_, &TickerBar::symbols_changed, this, &DashboardScreen::refresh_ticker);
+
+    // ── Top-movers rotation ──
+    // Every 5 minutes, ask Polygon for today's biggest US stock gainers
+    // and losers, combine them, sort by abs(change_pct) descending, and
+    // push the top kTopMoversCount symbols into the ticker bar. Falls
+    // through silently if Polygon isn't configured — the bar keeps its
+    // existing symbol list in that case.
+    top_movers_timer_ = new QTimer(this);
+    top_movers_timer_->setInterval(kTopMoversRefreshMs);
+    connect(top_movers_timer_, &QTimer::timeout, this, &DashboardScreen::rotate_top_movers);
+    top_movers_timer_->start();
+    // Kick a first rotation 5 s after construction so the user doesn't
+    // stare at the static seed list for 5 min on cold start.
+    QTimer::singleShot(5'000, this, &DashboardScreen::rotate_top_movers);
 
     // ── Main Content: Canvas (in scroll) + Market Pulse ──
     content_split_ = new QSplitter(Qt::Horizontal);
@@ -321,6 +342,127 @@ void DashboardScreen::hub_unsubscribe_ticker() {
         return;
     datahub::DataHub::instance().unsubscribe(this);
     hub_active_ = false;
+}
+
+// ── Top-movers rotation (Polygon-backed, sector-curated) ─────────────────
+//
+// Originally pulled from Polygon's /v2/snapshot/.../{gainers,losers}
+// endpoints, but those return raw top-% movers which on any given day
+// are dominated by sub-$1 microcap pumps (PIIIW, NXXT, OTC junk) — noise
+// rather than signal for an operator console. Replaced with a curated
+// ~100-name sector basket spanning Software, Semis, Big Tech, EV/Auto,
+// Pharma/Biotech, Energy, Financials, Consumer, Industrials/Logistics,
+// Crypto-adjacent, and Travel. Single batched /v3/snapshot call fetches
+// the whole universe, results ranked by abs(change_pct), top
+// kTopMoversCount pushed to the ticker bar.
+//
+// Adding/removing tickers is a one-edit operation on kSectorBasket below.
+// If you want true raw top-% (penny-stock pumps included), revert to
+// PolygonRestClient::get_top_movers("gainers"/"losers").
+
+namespace {
+// Curated US large/mid-cap basket — what an operator actually cares about
+// when scanning sector movement. Kept under 250 so it fits in a single
+// Polygon /v3/snapshot ticker.any_of call.
+const QStringList& sector_basket() {
+    static const QStringList kBasket = {
+        // ── Big Tech / Mega Cap ──
+        "AAPL", "MSFT", "GOOGL", "GOOG", "META", "AMZN",
+        // ── Software / Cloud ──
+        "ORCL", "CRM", "ADBE", "NOW", "PANW", "CRWD", "FTNT", "SNOW",
+        "DDOG", "MDB", "NET", "OKTA", "ZS", "WDAY", "INTU", "TEAM",
+        // ── Semis / Hardware ──
+        "NVDA", "AMD", "AVGO", "TSM", "QCOM", "MU", "AMAT", "LRCX",
+        "ASML", "MRVL", "ARM", "INTC", "SMCI", "TXN",
+        // ── EV / Auto ──
+        "TSLA", "RIVN", "LCID", "F", "GM", "NIO",
+        // ── Pharma / Biotech ──
+        "LLY", "PFE", "MRK", "JNJ", "NVO", "AZN", "GILD", "AMGN",
+        "BIIB", "MRNA", "REGN", "VRTX", "ABBV", "BMY", "NVS",
+        // ── Energy ──
+        "XOM", "CVX", "COP", "OXY", "EOG", "MPC", "PSX", "SLB",
+        "HAL", "BP", "SHEL",
+        // ── Financials / Banks ──
+        "JPM", "BAC", "WFC", "C", "MS", "GS", "BLK", "V", "MA", "AXP",
+        "COF", "SCHW", "BX",
+        // ── Consumer Staples / Discretionary ──
+        "WMT", "COST", "TGT", "HD", "LOW", "MCD", "SBUX", "NKE",
+        "PG", "KO", "PEP",
+        // ── Media / Entertainment ──
+        "DIS", "NFLX", "SPOT", "WBD", "PARA",
+        // ── Industrials / Logistics / Defense ──
+        "UPS", "FDX", "CAT", "DE", "BA", "LMT", "RTX", "HON", "GE",
+        "MMM", "UNP", "CSX",
+        // ── Crypto-adjacent / Fintech / Speculative ──
+        "COIN", "MSTR", "RIOT", "MARA", "SQ", "PYPL", "HOOD", "PLTR",
+        // ── Travel / Gig / Online ──
+        "ABNB", "BKNG", "MAR", "UBER", "LYFT", "DASH", "EXPE",
+        // ── Index ETFs (always-relevant context) ──
+        "SPY", "QQQ", "DIA", "IWM", "VXX",
+    };
+    return kBasket;
+}
+}  // namespace
+
+void DashboardScreen::rotate_top_movers() {
+    if (!ticker_bar_)
+        return;
+    if (!services::bot::PolygonRestClient::instance().is_configured())
+        return;
+
+    // Single batched snapshot call for the entire sector basket. Polygon
+    // returns up to 250 entries per ticker.any_of, so our ~100-name list
+    // fits in one HTTP round-trip. Cheap on the unlimited-call dev plan.
+    QPointer<DashboardScreen> self = this;
+    services::bot::PolygonRestClient::instance().get_snapshots(sector_basket(),
+        [self](bool ok, const QJsonValue& v, const QString& /*err*/) {
+            if (!self) return;
+            if (!ok || !v.isObject()) return;
+            // Snapshot shape: { results: [{ ticker, session: { price,
+            // change_percent, ... }, ...}], status: "OK" }. Build a
+            // (ticker, change_pct) list, filter out zero/missing moves
+            // (pre-market with no trades yet), sort by abs desc.
+            QVector<QPair<QString, double>> rows;
+            const QJsonArray results = v.toObject().value("results").toArray();
+            rows.reserve(results.size());
+            for (const auto& it : results) {
+                const QJsonObject o = it.toObject();
+                const QString sym = o.value("ticker").toString();
+                if (sym.isEmpty()) continue;
+                const QJsonObject sess = o.value("session").toObject();
+                const double pct = sess.value("change_percent").toDouble();
+                rows.append({sym, pct});
+            }
+            // Stash into the existing accumulator + reuse the apply path.
+            // gainers_buf_ holds the merged sorted set; losers_buf_ is
+            // unused under the curated-basket flow.
+            self->gainers_buf_ = rows;
+            self->losers_buf_.clear();
+            self->apply_top_movers_to_ticker();
+        });
+}
+
+void DashboardScreen::apply_top_movers_to_ticker() {
+    if (!ticker_bar_) return;
+    // Sort by abs(change_pct) descending so the biggest absolute movers
+    // (in either direction) come first. With the curated basket, this
+    // surfaces sector rotations: e.g. when energy is moving, XOM/CVX/SLB
+    // float to the top instead of OTC penny-stock noise.
+    QVector<QPair<QString, double>> merged;
+    merged.reserve(gainers_buf_.size() + losers_buf_.size());
+    merged.append(gainers_buf_);
+    merged.append(losers_buf_);
+    if (merged.isEmpty()) return;
+    std::sort(merged.begin(), merged.end(),
+              [](const auto& a, const auto& b) { return std::abs(a.second) > std::abs(b.second); });
+
+    QStringList syms;
+    syms.reserve(std::min<int>(kTopMoversCount, merged.size()));
+    for (const auto& p : merged) {
+        if (syms.size() >= kTopMoversCount) break;
+        if (!syms.contains(p.first)) syms.append(p.first);
+    }
+    ticker_bar_->set_symbols(syms);   // emits symbols_changed → refresh_ticker()
 }
 
 

@@ -153,7 +153,7 @@ void UpdateService::check_for_updates(bool silent) {
     QNetworkRequest req{QUrl(manifest_url_)};
     req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     req.setHeader(QNetworkRequest::UserAgentHeader,
-                  QString("FinceptTerminal/%1 (%2)").arg(local_version, platform_key));
+                  QString("PinpunchTerminal/%1 (%2)").arg(local_version, platform_key));
     QNetworkReply* reply = net_.get(req);
     connect(reply, &QNetworkReply::finished, this, &UpdateService::on_manifest_reply_finished);
 }
@@ -278,7 +278,7 @@ void UpdateService::start_download(const QString& url, const QString& expected_s
     const QString file_name = QFileInfo(QUrl(url).path()).fileName();
     const QString dir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
     pending_local_path_ = QDir(dir).filePath(file_name.isEmpty()
-                                                 ? QStringLiteral("FinceptTerminal-update.tmp")
+                                                 ? QStringLiteral("PinpunchTerminal-update.tmp")
                                                  : file_name);
 
     // Drop any leftover from a previous run — otherwise a partial file could
@@ -292,7 +292,7 @@ void UpdateService::start_download(const QString& url, const QString& expected_s
     QNetworkRequest req{QUrl(url)};
     req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     req.setHeader(QNetworkRequest::UserAgentHeader,
-                  QString("FinceptTerminal/%1").arg(QApplication::applicationVersion()));
+                  QString("PinpunchTerminal/%1").arg(QApplication::applicationVersion()));
     QNetworkReply* reply = net_.get(req);
     connect(reply, &QNetworkReply::finished, this, &UpdateService::on_download_reply_finished);
     connect(reply, &QNetworkReply::downloadProgress, this, &UpdateService::on_download_progress);

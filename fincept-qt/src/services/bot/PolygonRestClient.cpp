@@ -144,4 +144,42 @@ void PolygonRestClient::get_aggregates(const QString& ticker, const QString& fro
     run_get(url.toString(), cb);
 }
 
+void PolygonRestClient::get_financials(const QString& ticker, JsonCallback cb) {
+    if (ticker.trimmed().isEmpty()) {
+        cb(false, {}, QStringLiteral("empty ticker"));
+        return;
+    }
+    // Polygon's financials endpoint lives at /vX/reference/financials.
+    // Query the most recent quarter only — TICKER LOOKUP just needs the
+    // latest EPS + period_of_report_date for the "last earnings" line.
+    QUrl url(polygon_base_url() + "/vX/reference/financials");
+    QUrlQuery q;
+    q.addQueryItem("ticker", ticker.trimmed());
+    q.addQueryItem("limit", "1");
+    q.addQueryItem("order", "desc");
+    q.addQueryItem("sort", "period_of_report_date");
+    url.setQuery(q);
+    run_get(url.toString(), cb);
+}
+
+void PolygonRestClient::get_top_movers(const QString& direction, JsonCallback cb) {
+    // Snapshot endpoint for top gainers / losers / most active. Polygon
+    // returns up to 20 tickers per direction. We use this to feed the
+    // top-of-window ticker bar — refreshed every few minutes so the
+    // running tape always shows what's actually moving today.
+    const QString dir = (direction == "losers" || direction == "most_active"
+                            || direction == "most-active")
+        ? direction
+        : QStringLiteral("gainers");
+    // Polygon's URL uses `most_actives` (plural with an "s") historically,
+    // but `most-active` works on newer accounts. Normalise to the form
+    // Polygon's docs currently show.
+    const QString path = (dir == "most_active" || dir == "most-active")
+        ? QStringLiteral("/v2/snapshot/locale/us/markets/stocks/most_actives")
+        : (dir == "losers"
+               ? QStringLiteral("/v2/snapshot/locale/us/markets/stocks/losers")
+               : QStringLiteral("/v2/snapshot/locale/us/markets/stocks/gainers"));
+    run_get(polygon_base_url() + path, cb);
+}
+
 } // namespace fincept::services::bot

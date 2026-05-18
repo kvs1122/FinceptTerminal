@@ -165,7 +165,7 @@ void CloudTelemetryProvider::post_batch(const QString& endpoint, const QString& 
                                         QVector<Event> raw_for_requeue) {
     QNetworkRequest req((QUrl(endpoint)));
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    req.setHeader(QNetworkRequest::UserAgentHeader, "FinceptTerminal/Telemetry");
+    req.setHeader(QNetworkRequest::UserAgentHeader, "PinpunchTerminal/Telemetry");
     if (!api_key.isEmpty())
         req.setRawHeader("Authorization", QByteArray("Bearer ") + api_key.toUtf8());
 

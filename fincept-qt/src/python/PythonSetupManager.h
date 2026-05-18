@@ -50,7 +50,7 @@ class PythonSetupManager : public QObject {
     /// Run the full setup (async, emits progress signals)
     void run_setup();
 
-    /// Get the install directory (com.fincept.terminal)
+    /// Get the install directory (com.pinpunch.terminal)
     QString install_dir() const;
 
     /// Get UV executable path

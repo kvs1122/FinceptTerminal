@@ -29,7 +29,7 @@ constexpr const char* kOverpassEndpoint    = "https://overpass-api.de/api/interp
 // Wikidata's "honest API access" policy requires a real User-Agent. Anonymous
 // or library-default UAs get throttled hard; including contact info here is
 // the recommended convention.
-constexpr const char* kUserAgent = "FinceptTerminal/4.0 (https://fincept.in; support@fincept.in)";
+constexpr const char* kUserAgent = "PinpunchTerminal/4.0 (https://fincept.in; support@fincept.in)";
 
 // Cache TTL — UN/LOCODE / Wikidata port data drifts on a quarterly cadence.
 // Seven days keeps the screen snappy across launches without going stale.

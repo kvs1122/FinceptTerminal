@@ -94,6 +94,14 @@ class PolygonRestClient : public QObject {
     ///       basic_earnings_per_share: { value, unit }, … }}}] }
     void get_financials(const QString& ticker, JsonCallback cb);
 
+    /// Top market movers from Polygon's snapshot endpoints. `direction` is
+    /// "gainers" or "losers" (or "most_active" if Polygon enables it on
+    /// your tier). Calls
+    ///   /v2/snapshot/locale/us/markets/stocks/{direction}
+    /// Returns { tickers: [{ ticker, todaysChangePerc, lastTrade: {p},
+    /// day: {o,h,l,c,v}, prevDay, ... }] }.
+    void get_top_movers(const QString& direction, JsonCallback cb);
+
   private:
     PolygonRestClient();
     void run_get(const QString& full_url, JsonCallback cb);

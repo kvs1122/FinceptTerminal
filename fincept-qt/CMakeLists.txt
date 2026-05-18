@@ -33,7 +33,7 @@ if(WIN32 AND CMAKE_HOST_WIN32)
     unset(_fincept_sdk_dirs)
 endif()
 
-project(FinceptTerminal VERSION 4.0.3 LANGUAGES C CXX)
+project(PinpunchTerminal VERSION 4.0.3 LANGUAGES C CXX)
 
 # Strip C/C++ flags out of RC invocations — rc.exe only understands /D, /I, /fo.
 if(WIN32)
@@ -452,7 +452,7 @@ else()
     add_library(QXlsx_stub INTERFACE)
     add_library(QXlsx::QXlsx ALIAS QXlsx_stub)
 endif()
-# NOTE: PINPUNCH_HAS_QXLSX compile definition is applied to FinceptTerminal
+# NOTE: PINPUNCH_HAS_QXLSX compile definition is applied to PinpunchTerminal
 # after add_executable() — see the target_compile_definitions block below.
 
 # ── Auto-update service ─────────────────────────────────────────────────────
@@ -2092,7 +2092,7 @@ else()
     set(_PINPUNCH_PLATFORM_SOURCES "")
 endif()
 
-add_executable(FinceptTerminal ${_PINPUNCH_EXE_FLAGS}
+add_executable(PinpunchTerminal ${_PINPUNCH_EXE_FLAGS}
     ${CORE_SOURCES}
     ${NETWORK_SOURCES}
     ${DATAHUB_SOURCES}
@@ -2110,14 +2110,14 @@ add_executable(FinceptTerminal ${_PINPUNCH_EXE_FLAGS}
     ${_PINPUNCH_PLATFORM_SOURCES}
 )
 
-target_include_directories(FinceptTerminal PRIVATE
+target_include_directories(PinpunchTerminal PRIVATE
     src
 )
 
 # ── macOS bundle properties ───────────────────────────────────────────────────
 if(APPLE)
-    set_target_properties(FinceptTerminal PROPERTIES
-        MACOSX_BUNDLE_GUI_IDENTIFIER    "com.fincept.terminal"
+    set_target_properties(PinpunchTerminal PROPERTIES
+        MACOSX_BUNDLE_GUI_IDENTIFIER    "com.pinpunch.terminal"
         MACOSX_BUNDLE_BUNDLE_NAME       "Pinpunch Terminal"
         MACOSX_BUNDLE_BUNDLE_VERSION    "${CMAKE_PROJECT_VERSION}"
         MACOSX_BUNDLE_SHORT_VERSION_STRING "${CMAKE_PROJECT_VERSION}"
@@ -2127,7 +2127,7 @@ if(APPLE)
     # Copy .icns into the bundle Resources folder at build time
     set(_PINPUNCH_ICNS "${CMAKE_CURRENT_SOURCE_DIR}/resources/fincept.icns")
     if(EXISTS "${_PINPUNCH_ICNS}")
-        target_sources(FinceptTerminal PRIVATE "${_PINPUNCH_ICNS}")
+        target_sources(PinpunchTerminal PRIVATE "${_PINPUNCH_ICNS}")
         set_source_files_properties("${_PINPUNCH_ICNS}"
             PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
     else()
@@ -2143,20 +2143,20 @@ if(APPLE AND DEPLOY_QT)
               "$ENV{QTDIR}/bin"
     )
     if(MACDEPLOYQT_EXECUTABLE)
-        add_custom_command(TARGET FinceptTerminal POST_BUILD
+        add_custom_command(TARGET PinpunchTerminal POST_BUILD
             COMMAND "${MACDEPLOYQT_EXECUTABLE}"
-                "$<TARGET_BUNDLE_DIR:FinceptTerminal>"
+                "$<TARGET_BUNDLE_DIR:PinpunchTerminal>"
                 -no-strip -always-overwrite
             COMMENT "Running macdeployqt to bundle Qt frameworks..."
         )
         # Remove unused SQL driver plugins that reference libraries not present
         # on typical macOS installs (ODBC, PostgreSQL, Mimer). These cause
         # harmless but noisy "ERROR: no file at ..." warnings from macdeployqt.
-        add_custom_command(TARGET FinceptTerminal POST_BUILD
+        add_custom_command(TARGET PinpunchTerminal POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E rm -f
-                "$<TARGET_BUNDLE_DIR:FinceptTerminal>/Contents/PlugIns/sqldrivers/libqsqlodbc.dylib"
-                "$<TARGET_BUNDLE_DIR:FinceptTerminal>/Contents/PlugIns/sqldrivers/libqsqlpsql.dylib"
-                "$<TARGET_BUNDLE_DIR:FinceptTerminal>/Contents/PlugIns/sqldrivers/libqsqlmimer.dylib"
+                "$<TARGET_BUNDLE_DIR:PinpunchTerminal>/Contents/PlugIns/sqldrivers/libqsqlodbc.dylib"
+                "$<TARGET_BUNDLE_DIR:PinpunchTerminal>/Contents/PlugIns/sqldrivers/libqsqlpsql.dylib"
+                "$<TARGET_BUNDLE_DIR:PinpunchTerminal>/Contents/PlugIns/sqldrivers/libqsqlmimer.dylib"
             COMMENT "Removing unused SQL driver plugins (ODBC/PostgreSQL/Mimer)..."
         )
     else()
@@ -2167,7 +2167,7 @@ endif()
 
 # Precompiled header — Qt + std headers parsed once, reused across all TUs
 # QDebug excluded — it adds overhead in Release and is only needed for debugging
-target_precompile_headers(FinceptTerminal PRIVATE
+target_precompile_headers(PinpunchTerminal PRIVATE
     # ── Core Qt objects ───────────────────────────────────────────────────────
     <QObject>
     <QWidget>
@@ -2368,11 +2368,11 @@ if(APPLE AND OPENSSL_ROOT_DIR)
     endforeach()
 endif()
 
-target_include_directories(FinceptTerminal PRIVATE
+target_include_directories(PinpunchTerminal PRIVATE
     "${OPENSSL_INCLUDE_DIR}"
     "${md4c_SOURCE_DIR}/src"
 )
-target_link_libraries(FinceptTerminal PRIVATE
+target_link_libraries(PinpunchTerminal PRIVATE
     Qt6::Widgets
     Qt6::Charts
     Qt6::PrintSupport
@@ -2397,7 +2397,7 @@ target_link_libraries(FinceptTerminal PRIVATE
 # Windows: link dbghelp for the crash-handler minidump writer (see
 # src/core/crash/CrashHandler.cpp).
 if(WIN32)
-    target_link_libraries(FinceptTerminal PRIVATE dbghelp)
+    target_link_libraries(PinpunchTerminal PRIVATE dbghelp)
 endif()
 
 # Copy OpenSSL DLLs to build output — Windows only
@@ -2430,13 +2430,13 @@ if(WIN32)
     endif()
 
     if(OPENSSL_CRYPTO_DLL_FILE AND OPENSSL_SSL_DLL_FILE)
-        add_custom_command(TARGET FinceptTerminal POST_BUILD
+        add_custom_command(TARGET PinpunchTerminal POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${OPENSSL_CRYPTO_DLL_FILE}"
-                "$<TARGET_FILE_DIR:FinceptTerminal>"
+                "$<TARGET_FILE_DIR:PinpunchTerminal>"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${OPENSSL_SSL_DLL_FILE}"
-                "$<TARGET_FILE_DIR:FinceptTerminal>"
+                "$<TARGET_FILE_DIR:PinpunchTerminal>"
             COMMENT "Copying OpenSSL DLLs..."
         )
         message(STATUS "OpenSSL DLLs to deploy: ${OPENSSL_CRYPTO_DLL_FILE}, ${OPENSSL_SSL_DLL_FILE}")
@@ -2448,35 +2448,35 @@ endif()
 # ── Application version (single source of truth) ─────────────────────────────
 # PINPUNCH_VERSION_STRING is consumed by main.cpp so QApplication::applicationVersion()
 # always matches the project() VERSION declared at the top of this file.
-target_compile_definitions(FinceptTerminal PRIVATE
+target_compile_definitions(PinpunchTerminal PRIVATE
     PINPUNCH_VERSION_STRING="${CMAKE_PROJECT_VERSION}")
 
 # ── Optional feature compile definitions (applied after add_executable) ──────
 if(PINPUNCH_HAS_PRIVATE_HEADERS)
-    target_compile_definitions(FinceptTerminal PRIVATE PINPUNCH_HAS_QXLSX)
+    target_compile_definitions(PinpunchTerminal PRIVATE PINPUNCH_HAS_QXLSX)
 endif()
 
 if(HAS_WEBSOCKETS)
-    target_link_libraries(FinceptTerminal PRIVATE Qt6::WebSockets)
-    target_compile_definitions(FinceptTerminal PRIVATE HAS_QT_WEBSOCKETS)
+    target_link_libraries(PinpunchTerminal PRIVATE Qt6::WebSockets)
+    target_compile_definitions(PinpunchTerminal PRIVATE HAS_QT_WEBSOCKETS)
 endif()
 
 if(HAS_MULTIMEDIA)
-    target_link_libraries(FinceptTerminal PRIVATE Qt6::MultimediaWidgets)
-    target_compile_definitions(FinceptTerminal PRIVATE HAS_QT_MULTIMEDIA)
+    target_link_libraries(PinpunchTerminal PRIVATE Qt6::MultimediaWidgets)
+    target_compile_definitions(PinpunchTerminal PRIVATE HAS_QT_MULTIMEDIA)
 endif()
 
 if(HAS_TTS)
-    target_link_libraries(FinceptTerminal PRIVATE Qt6::TextToSpeech)
-    target_compile_definitions(FinceptTerminal PRIVATE HAS_QT_TTS)
+    target_link_libraries(PinpunchTerminal PRIVATE Qt6::TextToSpeech)
+    target_compile_definitions(PinpunchTerminal PRIVATE HAS_QT_TTS)
 endif()
 
 # ── Copy qgeoview DLL next to the exe so it's found at runtime ────────────────
 if(WIN32)
-    add_custom_command(TARGET FinceptTerminal POST_BUILD
+    add_custom_command(TARGET PinpunchTerminal POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "$<TARGET_FILE:qgeoview>"
-            "$<TARGET_FILE_DIR:FinceptTerminal>"
+            "$<TARGET_FILE_DIR:PinpunchTerminal>"
         COMMENT "Copying qgeoview.dll..."
     )
 endif()
@@ -2500,9 +2500,9 @@ if(WIN32)
         # when nothing changed. The previous DEPLOY_QT=ON gate caused the
         # exe to run against a stale plugin set after a clean rebuild,
         # producing 0xc0000005 crashes on startup.
-        add_custom_command(TARGET FinceptTerminal POST_BUILD
+        add_custom_command(TARGET PinpunchTerminal POST_BUILD
             COMMAND "${WINDEPLOYQT_EXE}"
-            ARGS "--no-translations" "--no-compiler-runtime" "$<TARGET_FILE:FinceptTerminal>"
+            ARGS "--no-translations" "--no-compiler-runtime" "$<TARGET_FILE:PinpunchTerminal>"
             COMMENT "Running windeployqt..."
         )
     endif()
@@ -2518,12 +2518,12 @@ if(WIN32)
         "Optional: path to a clean Qt plugins/ dir to overwrite sqldrivers from")
     if(PINPUNCH_QT_CONSISTENT_PLUGINS_DIR
        AND EXISTS "${PINPUNCH_QT_CONSISTENT_PLUGINS_DIR}/sqldrivers/qsqlite.dll")
-        add_custom_command(TARGET FinceptTerminal POST_BUILD
+        add_custom_command(TARGET PinpunchTerminal POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory
-                "$<TARGET_FILE_DIR:FinceptTerminal>/sqldrivers"
+                "$<TARGET_FILE_DIR:PinpunchTerminal>/sqldrivers"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${PINPUNCH_QT_CONSISTENT_PLUGINS_DIR}/sqldrivers/qsqlite.dll"
-                "$<TARGET_FILE_DIR:FinceptTerminal>/sqldrivers/qsqlite.dll"
+                "$<TARGET_FILE_DIR:PinpunchTerminal>/sqldrivers/qsqlite.dll"
             COMMENT "Overwriting sqldrivers from PINPUNCH_QT_CONSISTENT_PLUGINS_DIR..."
         )
     elseif(PINPUNCH_QT_CONSISTENT_PLUGINS_DIR)
@@ -2538,11 +2538,11 @@ endif()
 # that must never ship — backup folders (agents.deleted.*), test caches,
 # local SQLite databases — because on macOS anything unexpected in the
 # .app bundle makes codesign reject it ("bundle format unrecognized").
-add_custom_command(TARGET FinceptTerminal POST_BUILD
+add_custom_command(TARGET PinpunchTerminal POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/scripts"
-        "$<TARGET_FILE_DIR:FinceptTerminal>/scripts"
-    COMMAND ${CMAKE_COMMAND} -DSCRIPTS_DIR=$<TARGET_FILE_DIR:FinceptTerminal>/scripts
+        "$<TARGET_FILE_DIR:PinpunchTerminal>/scripts"
+    COMMAND ${CMAKE_COMMAND} -DSCRIPTS_DIR=$<TARGET_FILE_DIR:PinpunchTerminal>/scripts
             -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/prune_scripts_junk.cmake"
     COMMENT "Copying Python scripts to build output + pruning junk..."
 )
@@ -2551,37 +2551,37 @@ add_custom_command(TARGET FinceptTerminal POST_BUILD
 # PythonSetupManager::find_requirements_file() searches exe_dir/resources/ first.
 # Without this POST_BUILD step the files are only available via cmake --install,
 # causing setup to silently fail in dev/debug builds.
-add_custom_command(TARGET FinceptTerminal POST_BUILD
+add_custom_command(TARGET PinpunchTerminal POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory
-        "$<TARGET_FILE_DIR:FinceptTerminal>/resources"
+        "$<TARGET_FILE_DIR:PinpunchTerminal>/resources"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/resources/requirements-numpy1.txt"
-        "$<TARGET_FILE_DIR:FinceptTerminal>/resources/requirements-numpy1.txt"
+        "$<TARGET_FILE_DIR:PinpunchTerminal>/resources/requirements-numpy1.txt"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/resources/requirements-numpy2.txt"
-        "$<TARGET_FILE_DIR:FinceptTerminal>/resources/requirements-numpy2.txt"
+        "$<TARGET_FILE_DIR:PinpunchTerminal>/resources/requirements-numpy2.txt"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/resources/component_catalog.json"
-        "$<TARGET_FILE_DIR:FinceptTerminal>/resources/component_catalog.json"
+        "$<TARGET_FILE_DIR:PinpunchTerminal>/resources/component_catalog.json"
     COMMAND ${CMAKE_COMMAND} -E make_directory
-        "$<TARGET_FILE_DIR:FinceptTerminal>/resources/wallet"
+        "$<TARGET_FILE_DIR:PinpunchTerminal>/resources/wallet"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/resources/wallet/connect.html"
-        "$<TARGET_FILE_DIR:FinceptTerminal>/resources/wallet/connect.html"
+        "$<TARGET_FILE_DIR:PinpunchTerminal>/resources/wallet/connect.html"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/resources/wallet/swap.html"
-        "$<TARGET_FILE_DIR:FinceptTerminal>/resources/wallet/swap.html"
+        "$<TARGET_FILE_DIR:PinpunchTerminal>/resources/wallet/swap.html"
     COMMAND ${CMAKE_COMMAND} -E make_directory
-        "$<TARGET_FILE_DIR:FinceptTerminal>/resources/wallet/vendor"
+        "$<TARGET_FILE_DIR:PinpunchTerminal>/resources/wallet/vendor"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/resources/wallet/vendor"
-        "$<TARGET_FILE_DIR:FinceptTerminal>/resources/wallet/vendor"
+        "$<TARGET_FILE_DIR:PinpunchTerminal>/resources/wallet/vendor"
     COMMENT "Copying requirements files to build output..."
 )
 
 # Bundle yt-dlp for dashboard YouTube playback on all platforms.
 # Override path with: -DPINPUNCH_YTDLP_EXE=/abs/path/to/yt-dlp[.exe]
-set(PINPUNCH_YTDLP_EXE "" CACHE FILEPATH "Path to yt-dlp executable to bundle with FinceptTerminal")
+set(PINPUNCH_YTDLP_EXE "" CACHE FILEPATH "Path to yt-dlp executable to bundle with PinpunchTerminal")
 # Default OFF so builds on CI / macOS / Linux succeed without yt-dlp pre-installed.
 # Set ON only for official release builds where yt-dlp must be present.
 option(PINPUNCH_REQUIRE_BUNDLED_YTDLP "Fail configure if yt-dlp is missing" OFF)
@@ -2603,16 +2603,16 @@ if(PINPUNCH_YTDLP_TO_BUNDLE AND EXISTS "${PINPUNCH_YTDLP_TO_BUNDLE}")
         set(PINPUNCH_YTDLP_OUTPUT_NAME "yt-dlp")
     endif()
 
-    add_custom_command(TARGET FinceptTerminal POST_BUILD
+    add_custom_command(TARGET PinpunchTerminal POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${PINPUNCH_YTDLP_TO_BUNDLE}"
-            "$<TARGET_FILE_DIR:FinceptTerminal>/${PINPUNCH_YTDLP_OUTPUT_NAME}"
+            "$<TARGET_FILE_DIR:PinpunchTerminal>/${PINPUNCH_YTDLP_OUTPUT_NAME}"
         COMMENT "Copying yt-dlp for dashboard video playback..."
     )
 
     if(UNIX)
-        add_custom_command(TARGET FinceptTerminal POST_BUILD
-            COMMAND chmod +x "$<TARGET_FILE_DIR:FinceptTerminal>/${PINPUNCH_YTDLP_OUTPUT_NAME}"
+        add_custom_command(TARGET PinpunchTerminal POST_BUILD
+            COMMAND chmod +x "$<TARGET_FILE_DIR:PinpunchTerminal>/${PINPUNCH_YTDLP_OUTPUT_NAME}"
             COMMENT "Setting executable permission on bundled yt-dlp..."
         )
     endif()
@@ -2634,13 +2634,13 @@ endif()
 
 if(WIN32)
     # Windows: install exe + all DLLs beside it (windeployqt already copies them)
-    install(TARGETS FinceptTerminal RUNTIME DESTINATION "." COMPONENT core)
+    install(TARGETS PinpunchTerminal RUNTIME DESTINATION "." COMPONENT core)
     install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/scripts/"
             DESTINATION "scripts" COMPONENT scripts
             REGEX "(\\.deleted\\.|\\.pytest_cache|\\.benchmarks|__pycache__|\\.pyc$|\\.db$|\\.sqlite$|\\.sqlite3$|\\.bak$|\\.orig$)" EXCLUDE)
     # Requirements files — needed by PythonSetupManager at first run to install
     # Python packages. Must be deployed beside the exe so find_requirements_file()
-    # can locate them at C:/Program Files/FinceptTerminal/resources/*.txt.
+    # can locate them at C:/Program Files/PinpunchTerminal/resources/*.txt.
     install(FILES
             "${CMAKE_CURRENT_SOURCE_DIR}/resources/requirements-numpy1.txt"
             "${CMAKE_CURRENT_SOURCE_DIR}/resources/requirements-numpy2.txt"
@@ -2648,12 +2648,12 @@ if(WIN32)
 
 elseif(APPLE)
     # macOS: install the .app bundle
-    install(TARGETS FinceptTerminal BUNDLE DESTINATION "." COMPONENT core)
+    install(TARGETS PinpunchTerminal BUNDLE DESTINATION "." COMPONENT core)
     # Requirements files — deployed beside the .app so PythonSetupManager finds them
     install(FILES
             "${CMAKE_CURRENT_SOURCE_DIR}/resources/requirements-numpy1.txt"
             "${CMAKE_CURRENT_SOURCE_DIR}/resources/requirements-numpy2.txt"
-            DESTINATION "FinceptTerminal.app/Contents/Resources/resources" COMPONENT core)
+            DESTINATION "PinpunchTerminal.app/Contents/Resources/resources" COMPONENT core)
 
 else()
     # Linux: FHS-compliant layout. Architecture-neutral — works for x86_64
@@ -2661,7 +2661,7 @@ else()
     # produced for the target arch into share/fincept-terminal/. To build for
     # ARM64 cross-compile, configure with `-DCMAKE_SYSTEM_PROCESSOR=aarch64`
     # and an aarch64 Qt SDK on CMAKE_PREFIX_PATH.
-    install(TARGETS FinceptTerminal
+    install(TARGETS PinpunchTerminal
             RUNTIME DESTINATION "bin" COMPONENT core)
 
     # Qt Wayland QPA plugin — required so the app renders correctly on
@@ -2726,7 +2726,7 @@ endif()
 #   cd build && cpack -G IFW -C Release
 #
 # Requires: Qt Installer Framework (binarycreator on PATH or in Qt install)
-# Output:   FinceptTerminal-<ver>-<platform>-setup.exe/.run/.app
+# Output:   PinpunchTerminal-<ver>-<platform>-setup.exe/.run/.app
 
 option(PINPUNCH_BUILD_INSTALLER "Generate QtIFW installer via CPack" OFF)
 
@@ -2734,7 +2734,7 @@ if(PINPUNCH_BUILD_INSTALLER)
 
     # ── Windows: capture windeployqt output for the installer ────────────────
     if(WIN32 AND DEPLOY_QT)
-        install(DIRECTORY "$<TARGET_FILE_DIR:FinceptTerminal>/"
+        install(DIRECTORY "$<TARGET_FILE_DIR:PinpunchTerminal>/"
                 DESTINATION "."
                 COMPONENT core
                 FILES_MATCHING
@@ -2755,7 +2755,7 @@ if(PINPUNCH_BUILD_INSTALLER)
         # qt.conf — pins plugin/library paths relative to the exe. Without
         # this Qt uses hardcoded build-machine paths that don't exist on the
         # user's machine, producing "could not load the Qt platform plugin".
-        install(FILES "$<TARGET_FILE_DIR:FinceptTerminal>/qt.conf"
+        install(FILES "$<TARGET_FILE_DIR:PinpunchTerminal>/qt.conf"
                 DESTINATION "." COMPONENT core OPTIONAL)
         # Qt plugin directories. OPTIONAL keeps the install non-fatal when
         # a plugin dir isn't produced by windeployqt on a given host (e.g.
@@ -2764,21 +2764,21 @@ if(PINPUNCH_BUILD_INSTALLER)
                 platforms sqldrivers imageformats iconengines styles tls
                 multimedia texttospeech networkinformation platforminputcontexts
                 printsupport generic)
-            install(DIRECTORY "$<TARGET_FILE_DIR:FinceptTerminal>/${_plugin_dir}"
+            install(DIRECTORY "$<TARGET_FILE_DIR:PinpunchTerminal>/${_plugin_dir}"
                     DESTINATION "." COMPONENT core OPTIONAL)
         endforeach()
     endif()
 
     # ── CPack general metadata ───────────────────────────────────────────────
-    set(CPACK_PACKAGE_NAME "FinceptTerminal")
+    set(CPACK_PACKAGE_NAME "PinpunchTerminal")
     set(CPACK_PACKAGE_VENDOR "Fincept Corporation")
     set(CPACK_PACKAGE_VERSION "${CMAKE_PROJECT_VERSION}")
     set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
         "Professional financial intelligence terminal with AI analytics")
     set(CPACK_PACKAGE_HOMEPAGE_URL
-        "https://github.com/Fincept-Corporation/FinceptTerminal")
+        "https://github.com/Fincept-Corporation/PinpunchTerminal")
     set(CPACK_RESOURCE_FILE_LICENSE
-        "${CMAKE_CURRENT_SOURCE_DIR}/packaging/installer/packages/com.fincept.terminal.core/meta/license.txt")
+        "${CMAKE_CURRENT_SOURCE_DIR}/packaging/installer/packages/com.pinpunch.terminal.core/meta/license.txt")
     set(CPACK_PACKAGE_ICON
         "${CMAKE_CURRENT_SOURCE_DIR}/resources/fincept.ico")
 
@@ -2850,7 +2850,7 @@ if(PINPUNCH_BUILD_INSTALLER)
 
     # ── CPackIFW installer configuration ─────────────────────────────────────
     set(CPACK_IFW_PACKAGE_TITLE "Pinpunch Terminal")
-    set(CPACK_IFW_PACKAGE_NAME "com.fincept.terminal")
+    set(CPACK_IFW_PACKAGE_NAME "com.pinpunch.terminal")
     set(CPACK_IFW_PACKAGE_PUBLISHER "Fincept Corporation")
     set(CPACK_IFW_PACKAGE_START_MENU_DIRECTORY "Fincept")
     set(CPACK_IFW_PACKAGE_ICON
@@ -2873,16 +2873,16 @@ if(PINPUNCH_BUILD_INSTALLER)
 
     # Target directory defaults per platform
     if(WIN32)
-        set(CPACK_IFW_TARGET_DIRECTORY "@ApplicationsDirX64@/FinceptTerminal")
+        set(CPACK_IFW_TARGET_DIRECTORY "@ApplicationsDirX64@/PinpunchTerminal")
     elseif(APPLE)
-        set(CPACK_IFW_TARGET_DIRECTORY "/Applications/FinceptTerminal")
+        set(CPACK_IFW_TARGET_DIRECTORY "/Applications/PinpunchTerminal")
     else()
-        set(CPACK_IFW_TARGET_DIRECTORY "@HomeDir@/FinceptTerminal")
+        set(CPACK_IFW_TARGET_DIRECTORY "@HomeDir@/PinpunchTerminal")
     endif()
 
     # Output file naming — arch-aware so the auto-updater manifest can point
     # at predictable, stable URLs. Scheme:
-    #   FinceptTerminal-<version>-<platform>-<arch>-setup
+    #   PinpunchTerminal-<version>-<platform>-<arch>-setup
     # Platform: windows | linux | macos
     # Arch:     x64 | arm64
     # The CPack IFW generator appends .exe on Windows, .app on macOS, .run on Linux.
@@ -2894,7 +2894,7 @@ if(PINPUNCH_BUILD_INSTALLER)
             set(_PINPUNCH_PKG_ARCH "x64")
         endif()
         set(CPACK_PACKAGE_FILE_NAME
-            "FinceptTerminal-${CMAKE_PROJECT_VERSION}-windows-${_PINPUNCH_PKG_ARCH}-setup")
+            "PinpunchTerminal-${CMAKE_PROJECT_VERSION}-windows-${_PINPUNCH_PKG_ARCH}-setup")
     elseif(APPLE)
         # On macOS CMAKE_OSX_ARCHITECTURES is the authoritative source
         # (it drives the actual binary slice). Fall back to host processor.
@@ -2913,7 +2913,7 @@ if(PINPUNCH_BUILD_INSTALLER)
             set(_PINPUNCH_PKG_ARCH "x64")
         endif()
         set(CPACK_PACKAGE_FILE_NAME
-            "FinceptTerminal-${CMAKE_PROJECT_VERSION}-macos-${_PINPUNCH_PKG_ARCH}-setup")
+            "PinpunchTerminal-${CMAKE_PROJECT_VERSION}-macos-${_PINPUNCH_PKG_ARCH}-setup")
     else()
         if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
             set(_PINPUNCH_PKG_ARCH "arm64")
@@ -2921,7 +2921,7 @@ if(PINPUNCH_BUILD_INSTALLER)
             set(_PINPUNCH_PKG_ARCH "x64")
         endif()
         set(CPACK_PACKAGE_FILE_NAME
-            "FinceptTerminal-${CMAKE_PROJECT_VERSION}-linux-${_PINPUNCH_PKG_ARCH}-setup")
+            "PinpunchTerminal-${CMAKE_PROJECT_VERSION}-linux-${_PINPUNCH_PKG_ARCH}-setup")
     endif()
     message(STATUS "  Installer filename: ${CPACK_PACKAGE_FILE_NAME}")
 
@@ -2942,20 +2942,20 @@ if(PINPUNCH_BUILD_INSTALLER)
 
     # ── CPackIFW component configuration ─────────────────────────────────────
     cpack_ifw_configure_component(core
-        NAME "com.fincept.terminal.core"
+        NAME "com.pinpunch.terminal.core"
         VERSION "${CMAKE_PROJECT_VERSION}"
-        SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/packaging/installer/packages/com.fincept.terminal.core/meta/installscript.qs"
-        LICENSES "AGPL-3.0" "${CMAKE_CURRENT_SOURCE_DIR}/packaging/installer/packages/com.fincept.terminal.core/meta/license.txt"
+        SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/packaging/installer/packages/com.pinpunch.terminal.core/meta/installscript.qs"
+        LICENSES "AGPL-3.0" "${CMAKE_CURRENT_SOURCE_DIR}/packaging/installer/packages/com.pinpunch.terminal.core/meta/license.txt"
         SORTING_PRIORITY 100
         DEFAULT TRUE
         FORCED_INSTALLATION)
 
     cpack_ifw_configure_component(scripts
-        NAME "com.fincept.terminal.scripts"
+        NAME "com.pinpunch.terminal.scripts"
         VERSION "${CMAKE_PROJECT_VERSION}"
         SORTING_PRIORITY 50
         DEFAULT TRUE
-        DEPENDS "com.fincept.terminal.core")
+        DEPENDS "com.pinpunch.terminal.core")
 
     # ── Linux: AppImage helper target ────────────────────────────────────────
     # `linuxdeploy` + `linuxdeploy-plugin-qt` are external tools; we don't
@@ -2977,7 +2977,7 @@ if(PINPUNCH_BUILD_INSTALLER)
                     --output appimage
                     --desktop-file "${CMAKE_BINARY_DIR}/AppDir/usr/share/applications/fincept-terminal.desktop"
                 WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-                COMMENT "Building FinceptTerminal AppImage..."
+                COMMENT "Building PinpunchTerminal AppImage..."
                 VERBATIM)
             message(STATUS "AppImage target available — run `cmake --build . --target appimage`")
         else()
@@ -3010,9 +3010,9 @@ if(APPLE)
         # Sign-only target: useful for dev signing (not notarized).
         add_custom_target(sign-macos
             COMMAND "${_PINPUNCH_MACDEPLOYQT}"
-                "$<TARGET_BUNDLE_DIR:FinceptTerminal>"
+                "$<TARGET_BUNDLE_DIR:PinpunchTerminal>"
                 "-sign-for-notarization=${PINPUNCH_MACOS_SIGN_IDENTITY}"
-            COMMENT "Signing FinceptTerminal.app with ${PINPUNCH_MACOS_SIGN_IDENTITY}..."
+            COMMENT "Signing PinpunchTerminal.app with ${PINPUNCH_MACOS_SIGN_IDENTITY}..."
             VERBATIM)
 
         # Full release pipeline: sign → zip → submit → wait → staple.
@@ -3021,17 +3021,17 @@ if(APPLE)
            AND PINPUNCH_MACOS_NOTARY_PASSWORD)
             add_custom_target(notarize-macos
                 COMMAND "${_PINPUNCH_DITTO}" -c -k --keepParent
-                    "$<TARGET_BUNDLE_DIR:FinceptTerminal>"
-                    "${CMAKE_BINARY_DIR}/FinceptTerminal-notarize.zip"
+                    "$<TARGET_BUNDLE_DIR:PinpunchTerminal>"
+                    "${CMAKE_BINARY_DIR}/PinpunchTerminal-notarize.zip"
                 COMMAND xcrun notarytool submit
-                    "${CMAKE_BINARY_DIR}/FinceptTerminal-notarize.zip"
+                    "${CMAKE_BINARY_DIR}/PinpunchTerminal-notarize.zip"
                     --apple-id "${PINPUNCH_MACOS_NOTARY_APPLE_ID}"
                     --team-id  "${PINPUNCH_MACOS_NOTARY_TEAM_ID}"
                     --password "${PINPUNCH_MACOS_NOTARY_PASSWORD}"
                     --wait
-                COMMAND xcrun stapler staple "$<TARGET_BUNDLE_DIR:FinceptTerminal>"
+                COMMAND xcrun stapler staple "$<TARGET_BUNDLE_DIR:PinpunchTerminal>"
                 DEPENDS sign-macos
-                COMMENT "Notarizing + stapling FinceptTerminal.app..."
+                COMMENT "Notarizing + stapling PinpunchTerminal.app..."
                 VERBATIM)
         endif()
     endif()
@@ -3056,8 +3056,8 @@ if(WIN32)
                     /td SHA256
                     /f  "${PINPUNCH_WIN_SIGN_CERT}"
                     /p  "${PINPUNCH_WIN_SIGN_PASSWORD}"
-                    "$<TARGET_FILE:FinceptTerminal>"
-                COMMENT "Signing FinceptTerminal.exe with Authenticode..."
+                    "$<TARGET_FILE:PinpunchTerminal>"
+                COMMENT "Signing PinpunchTerminal.exe with Authenticode..."
                 VERBATIM)
         else()
             message(WARNING "PINPUNCH_WIN_SIGN_CERT set but signtool.exe not found")

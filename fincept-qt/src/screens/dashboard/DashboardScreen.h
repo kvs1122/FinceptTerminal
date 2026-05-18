@@ -65,6 +65,19 @@ class DashboardScreen : public QWidget {
     QHash<QString, services::QuoteData> ticker_cache_;
     QStringList ticker_subscribed_;
     bool hub_active_ = false;
+
+    // Top-movers rotation — every kTopMoversRefreshMs the ticker bar's
+    // symbol list is replaced with Polygon's "today's biggest US stock
+    // movers" (gainers + losers, ordered by abs(change_pct) desc). Falls
+    // back silently to a static seed list if Polygon isn't configured.
+    QTimer* top_movers_timer_ = nullptr;
+    QVector<QPair<QString,double>> gainers_buf_;   // accumulator across the
+    QVector<QPair<QString,double>> losers_buf_;    // 2 parallel Polygon calls
+    int     top_movers_responses_pending_ = 0;
+    void rotate_top_movers();
+    void apply_top_movers_to_ticker();
+    static constexpr int kTopMoversRefreshMs = 5 * 60 * 1000;   // 5 min
+    static constexpr int kTopMoversCount     = 30;              // 15 gainers + 15 losers
 };
 
 } // namespace fincept::screens

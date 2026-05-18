@@ -5,7 +5,7 @@
 namespace fincept {
 
 static constexpr const char* kOrg = "Fincept";
-static constexpr const char* kApp = "FinceptTerminal";
+static constexpr const char* kApp = "PinpunchTerminal";
 static constexpr const char* kGroup = "component_usage";
 
 PopularityTracker& PopularityTracker::instance() {

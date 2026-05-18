@@ -31,7 +31,7 @@ static constexpr int kWsReconnectDelayMs    = 10000;  // 10s before WebSocket re
 static constexpr int kSummaryMaxChars       = 300;    // max chars for article summary
 
 // Use a real browser User-Agent — major financial publishers reject
-// "FinceptTerminal/4.0" as scraper traffic. Browser UA gets us 200s on
+// "PinpunchTerminal/4.0" as scraper traffic. Browser UA gets us 200s on
 // the same endpoints.
 static constexpr const char* kBrowserUserAgent =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "

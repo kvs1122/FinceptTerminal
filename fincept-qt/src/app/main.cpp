@@ -219,10 +219,10 @@ int main(int argc, char* argv[]) {
     // launch. See InstanceLock.h for the fuller story (issues #234, #252).
     //
     // The instance key is scoped to the active profile name, so
-    // "FinceptTerminal --profile work" and "FinceptTerminal --profile personal"
+    // "PinpunchTerminal --profile work" and "PinpunchTerminal --profile personal"
     // run as two independent primaries.
     QApplication app(argc, argv);
-    app.setApplicationName("FinceptTerminal");
+    app.setApplicationName("PinpunchTerminal");
     app.setOrganizationName("Fincept");
 #ifndef PINPUNCH_VERSION_STRING
 #    define PINPUNCH_VERSION_STRING "0.0.0-dev"
@@ -249,7 +249,7 @@ int main(int argc, char* argv[]) {
     }
 
     // ── Single-instance lock + new-window IPC ────────────────────────────────
-    const QString profile_key = QString("FinceptTerminal-%1").arg(fincept::ProfileManager::instance().active());
+    const QString profile_key = QString("PinpunchTerminal-%1").arg(fincept::ProfileManager::instance().active());
     fincept::InstanceLock instance_lock;
     const auto lock_status = instance_lock.acquire(profile_key, QCoreApplication::arguments());
 
@@ -662,12 +662,12 @@ int main(int argc, char* argv[]) {
     });
 
     FT_MARK(40);
-    // Create all application directories under %LOCALAPPDATA%/com.fincept.terminal
+    // Create all application directories under %LOCALAPPDATA%/com.pinpunch.terminal
     fincept::AppPaths::ensure_all();
     FT_MARK(41);
 
     // ── One-time migration from legacy %APPDATA% location ─────────────────
-    // Current locations (under %LOCALAPPDATA%\com.fincept.terminal\):
+    // Current locations (under %LOCALAPPDATA%\com.pinpunch.terminal\):
     //   Log: <root>/logs/fincept.log    DB: <root>/data/fincept.db
     {
         const QString old_base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
@@ -699,9 +699,9 @@ int main(int argc, char* argv[]) {
     // Clean legacy v3 DB location (these paths are no longer live DBs)
     {
         const QString local_dir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-        const QString legacy1 = local_dir.section('/', 0, -3) + "/FinceptTerminal/fincept_settings.db";
+        const QString legacy1 = local_dir.section('/', 0, -3) + "/PinpunchTerminal/fincept_settings.db";
         const QString legacy2 =
-            QString(local_dir).replace("Fincept/FinceptTerminal", "FinceptTerminal") + "/fincept_settings.db";
+            QString(local_dir).replace("Fincept/PinpunchTerminal", "PinpunchTerminal") + "/fincept_settings.db";
         QFile::remove(legacy1 + "-wal");
         QFile::remove(legacy1 + "-shm");
         QFile::remove(legacy2 + "-wal");
@@ -857,8 +857,8 @@ int main(int argc, char* argv[]) {
     }
 
     LOG_INFO("App", "Checking settings for legacy migration...");
-    // One-time migration: copy settings from old DB (Local\FinceptTerminal\fincept_settings.db)
-    // to new DB (Roaming\Fincept\FinceptTerminal\fincept.db) if the new DB has no settings yet.
+    // One-time migration: copy settings from old DB (Local\PinpunchTerminal\fincept_settings.db)
+    // to new DB (Roaming\Fincept\PinpunchTerminal\fincept.db) if the new DB has no settings yet.
     {
         LOG_INFO("App", "Querying settings...");
         auto existing = fincept::SettingsRepository::instance().get("fincept_session");
@@ -866,11 +866,11 @@ int main(int argc, char* argv[]) {
         bool new_db_empty = existing.is_err() || existing.value().isEmpty();
         if (new_db_empty) {
             QString local_base = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-            // AppLocalDataLocation = .../Local/Fincept/FinceptTerminal — strip to .../Local/FinceptTerminal
-            QString old_db_path = local_base.section('/', 0, -3) + "/FinceptTerminal/fincept_settings.db";
+            // AppLocalDataLocation = .../Local/Fincept/PinpunchTerminal — strip to .../Local/PinpunchTerminal
+            QString old_db_path = local_base.section('/', 0, -3) + "/PinpunchTerminal/fincept_settings.db";
             if (!QFile::exists(old_db_path)) {
                 // Try without the org subfolder
-                old_db_path = local_base.replace("Fincept/FinceptTerminal", "FinceptTerminal") + "/fincept_settings.db";
+                old_db_path = local_base.replace("Fincept/PinpunchTerminal", "PinpunchTerminal") + "/fincept_settings.db";
             }
             if (QFile::exists(old_db_path)) {
                 QSqlDatabase old_db = QSqlDatabase::addDatabase("QSQLITE", "legacy_migration");

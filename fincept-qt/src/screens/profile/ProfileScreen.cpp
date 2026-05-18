@@ -500,10 +500,10 @@ QWidget* ProfileScreen::build_support() {
         connect(b, &QPushButton::clicked, this, [url]() { QDesktopServices::openUrl(QUrl(url)); });
         lrl->addWidget(b);
     };
-    make_link_btn("DOCS", "https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs");
-    make_link_btn("GITHUB", "https://github.com/Fincept-Corporation/FinceptTerminal");
+    make_link_btn("DOCS", "https://github.com/Fincept-Corporation/PinpunchTerminal/tree/main/docs");
+    make_link_btn("GITHUB", "https://github.com/Fincept-Corporation/PinpunchTerminal");
     make_link_btn("DISCORD", "https://discord.gg/ae87a8ygbN");
-    make_link_btn("FAQ", "https://github.com/Fincept-Corporation/FinceptTerminal/wiki");
+    make_link_btn("FAQ", "https://github.com/Fincept-Corporation/PinpunchTerminal/wiki");
     lrl->addStretch();
     lvl->addWidget(lr);
     vl->addWidget(lp);

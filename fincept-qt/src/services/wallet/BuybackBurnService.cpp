@@ -89,7 +89,7 @@ void BuybackBurnService::refresh(const QStringList& topics) {
 void BuybackBurnService::refresh_buyback_epoch(const QString& endpoint) {
     QNetworkRequest req(QUrl(endpoint + QStringLiteral("/buyback/current")));
     req.setHeader(QNetworkRequest::UserAgentHeader,
-                  QStringLiteral("FinceptTerminal/BuybackBurnService"));
+                  QStringLiteral("PinpunchTerminal/BuybackBurnService"));
 
     auto* reply = nam_->get(req);
     QPointer<BuybackBurnService> self = this;

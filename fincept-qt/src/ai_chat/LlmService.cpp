@@ -367,7 +367,7 @@ QMap<QString, QString> LlmService::get_headers() const {
         const auto& sess = fincept::auth::AuthManager::instance().session();
         if (!sess.session_token.isEmpty())
             h["X-Session-Token"] = sess.session_token;
-        h["User-Agent"] = "FinceptTerminal/4.0"; // Cloudflare requires it.
+        h["User-Agent"] = "PinpunchTerminal/4.0"; // Cloudflare requires it.
     } else {
         if (!api_key_.isEmpty())
             h["Authorization"] = "Bearer " + api_key_;

@@ -96,7 +96,7 @@ void RealYieldService::refresh_yield_real(const QString& endpoint,
                                           const QString& pubkey) {
     QNetworkRequest req(QUrl(endpoint + QStringLiteral("/yield/") + pubkey));
     req.setHeader(QNetworkRequest::UserAgentHeader,
-                  QStringLiteral("FinceptTerminal/RealYieldService"));
+                  QStringLiteral("PinpunchTerminal/RealYieldService"));
     auto* reply = nam_->get(req);
     QPointer<RealYieldService> self = this;
     QObject::connect(reply, &QNetworkReply::finished, this,
@@ -129,7 +129,7 @@ void RealYieldService::refresh_yield_real(const QString& endpoint,
 void RealYieldService::refresh_revenue_real(const QString& endpoint) {
     QNetworkRequest req(QUrl(endpoint + QStringLiteral("/revenue/current")));
     req.setHeader(QNetworkRequest::UserAgentHeader,
-                  QStringLiteral("FinceptTerminal/RealYieldService"));
+                  QStringLiteral("PinpunchTerminal/RealYieldService"));
     auto* reply = nam_->get(req);
     QPointer<RealYieldService> self = this;
     QObject::connect(reply, &QNetworkReply::finished, this,

@@ -37,8 +37,17 @@ class TickerBar : public QWidget {
     /// Returns the current symbol list (persisted user preference).
     QStringList symbols() const { return symbols_; }
 
+    /// Programmatic symbol-list update — used by DashboardScreen to rotate
+    /// the ticker through today's top movers from Polygon. Emits
+    /// symbols_changed so the dashboard re-subscribes the hub. Does NOT
+    /// persist to SettingsRepository (that's reserved for explicit user
+    /// edits via the Edit Symbols dialog — we don't want a 5-min cron
+    /// stomping a user's hand-curated list).
+    void set_symbols(const QStringList& symbols);
+
   signals:
-    /// Emitted when the user saves a new symbol list — caller should re-fetch.
+    /// Emitted when the symbol list changes (user edit OR programmatic
+    /// rotation via set_symbols) — caller should re-fetch.
     void symbols_changed(const QStringList& symbols);
 
   protected:

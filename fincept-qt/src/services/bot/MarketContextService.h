@@ -86,6 +86,7 @@ class MarketContextService : public QObject, public fincept::datahub::Producer {
     QNetworkAccessManager* nam_  = nullptr;
     QTimer*  hourly_timer_       = nullptr;
     bool     fetch_in_flight_    = false;
+    qint64   last_publish_secs_  = 0;     // unix secs of last successful publish; 0 = none
 };
 
 } // namespace fincept::services::bot

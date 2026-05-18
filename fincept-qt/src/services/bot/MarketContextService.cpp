@@ -133,13 +133,26 @@ MarketContextService::MarketContextService() : QObject(nullptr) {
         if (nam_) { nam_->deleteLater(); nam_ = nullptr; }
     });
 
+    // 5-minute watchdog tick. Each tick checks whether the last successful
+    // publish is older than ~55 minutes — if so, fire a fresh fetch. This
+    // gives us hourly cadence in normal operation, but ALSO recovers from
+    // macOS sleep/resume (Qt timers don't fire while suspended) and from
+    // a hung fetch_in_flight_ that previously froze the cycle for hours.
+    // Pure-interval timers couldn't recover either case cleanly — there
+    // was no observer that knew the narrative had gone stale.
     hourly_timer_ = new QTimer(this);
-    hourly_timer_->setInterval(60 * 60 * 1000);   // 1 hour
+    hourly_timer_->setInterval(5 * 60 * 1000);   // 5-minute watchdog tick
     QObject::connect(hourly_timer_, &QTimer::timeout, this, [this]() {
         if (!in_active_window(QDateTime::currentDateTimeUtc())) {
             publish_off_hours();
             return;
         }
+        const qint64 now = QDateTime::currentSecsSinceEpoch();
+        const qint64 age = (last_publish_secs_ > 0) ? (now - last_publish_secs_) : INT64_MAX;
+        constexpr qint64 kRefreshAfterSecs = 55 * 60;   // refresh if last publish > 55 min ago
+        if (age < kRefreshAfterSecs) return;             // narrative still fresh; idle
+        mc_diag(QString("watchdog: last publish %1 min ago — firing fetch")
+                    .arg(age == INT64_MAX ? -1 : age / 60));
         start_fetch();
     });
     hourly_timer_->start();
@@ -364,6 +377,12 @@ void MarketContextService::publish_with_llm(const QStringList& macro_lines,
                     QString::fromUtf8(topics::kMarketContext),
                     QVariant::fromValue(out));
                 self->persist_to_cache(out);
+                // Stamp last_publish so the 5-min watchdog resets its
+                // staleness clock. Only mark success — error publishes
+                // shouldn't pause the watchdog, we want it to retry
+                // again on the next tick.
+                if (out.error.isEmpty())
+                    self->last_publish_secs_ = QDateTime::currentSecsSinceEpoch();
             }, Qt::QueuedConnection);
         });
         return;
@@ -411,6 +430,8 @@ void MarketContextService::publish_with_llm(const QStringList& macro_lines,
                 QString::fromUtf8(topics::kMarketContext),
                 QVariant::fromValue(out));
             self->persist_to_cache(out);
+            if (out.error.isEmpty())
+                self->last_publish_secs_ = QDateTime::currentSecsSinceEpoch();
         }, Qt::QueuedConnection);
     });
 }

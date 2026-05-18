@@ -380,8 +380,8 @@ HelpScreen::HelpScreen(QWidget* parent) : QWidget(parent) {
             {"✉", "Email Support", "support@fincept.in", "mailto:support@fincept.in"},
             {"💬", "Discord Server", "discord.gg/ae87a8ygbN", "https://discord.gg/ae87a8ygbN"},
             {"🌐", "Website", "fincept.in", "https://fincept.in"},
-            {"📦", "GitHub", "github.com/Fincept-Corporation/FinceptTerminal",
-             "https://github.com/Fincept-Corporation/FinceptTerminal"},
+            {"📦", "GitHub", "github.com/Fincept-Corporation/PinpunchTerminal",
+             "https://github.com/Fincept-Corporation/PinpunchTerminal"},
         };
 
         int ci = 0;

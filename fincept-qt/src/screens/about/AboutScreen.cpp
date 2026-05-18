@@ -296,12 +296,12 @@ AboutScreen::AboutScreen(QWidget* parent) : QWidget(parent) {
             QString url;
         };
         const Link links[] = {
-            {"GitHub Repository", "https://github.com/Fincept-Corporation/FinceptTerminal"},
-            {"License (AGPL-3.0)", "https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/LICENSE"},
+            {"GitHub Repository", "https://github.com/Fincept-Corporation/PinpunchTerminal"},
+            {"License (AGPL-3.0)", "https://github.com/Fincept-Corporation/PinpunchTerminal/blob/main/LICENSE"},
             {"Commercial License",
-             "https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md"},
-            {"Trademark Policy", "https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/TRADEMARK.md"},
-            {"Contributor CLA", "https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/CLA.md"},
+             "https://github.com/Fincept-Corporation/PinpunchTerminal/blob/main/docs/COMMERCIAL_LICENSE.md"},
+            {"Trademark Policy", "https://github.com/Fincept-Corporation/PinpunchTerminal/blob/main/docs/TRADEMARK.md"},
+            {"Contributor CLA", "https://github.com/Fincept-Corporation/PinpunchTerminal/blob/main/docs/CLA.md"},
             {"Official Website", "https://fincept.in"},
         };
 

@@ -15,7 +15,7 @@ namespace fincept {
 ///   // AppPaths::data() now returns .../profiles/work/data/
 ///
 /// Profiles are stored under:
-///   %LOCALAPPDATA%/com.fincept.terminal/profiles/<name>/
+///   %LOCALAPPDATA%/com.pinpunch.terminal/profiles/<name>/
 ///
 /// A manifest at root/profiles.json tracks the list of profiles. Each entry
 /// carries a stable `ProfileId` UUID alongside its human-readable name —

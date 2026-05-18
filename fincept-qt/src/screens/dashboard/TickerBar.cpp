@@ -140,9 +140,21 @@ TickerBar::TickerBar(QWidget* parent) : QWidget(parent) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 void TickerBar::load_symbols() {
-    // Build default list: indices + movers
-    const QStringList defaults = services::MarketDataService::indices_symbols()
-                                 + services::MarketDataService::mover_symbols();
+    // Cold-start seed — US large-caps + high-volume movers. We DROP the
+    // international index symbols (^N225 / ^FTSE / etc.) that used to be
+    // in this seed: the runner is meant for US-stock context and the
+    // foreign indices made the tape feel stale (closed exchanges, last
+    // tick from hours ago, no actionable info while you're trading US
+    // markets). DashboardScreen replaces this list with Polygon's live
+    // top-movers (gainers + losers) every 5 minutes via set_symbols, so
+    // this seed is only what you see for the first few seconds.
+    const QStringList defaults = {
+        // S&P large-caps that always have something happening intraday
+        "SPY", "QQQ", "AAPL", "MSFT", "NVDA", "TSLA", "GOOGL", "AMZN",
+        "META", "AMD", "JPM", "V", "MA", "UNH", "XOM", "WMT",
+        // Top-of-mind names from MarketDataService::mover_symbols
+        "SMCI", "PLTR", "MSTR", "INTC", "BA", "COIN", "DIS", "NFLX",
+    };
 
     // Attempt to load from settings on a background thread; fall back to defaults
     // immediately so the ticker isn't blank while the DB read is in flight.
@@ -172,6 +184,21 @@ void TickerBar::save_symbols() {
     (void)QtConcurrent::run([value]() {
         fincept::SettingsRepository::instance().set(kSettingsKey, value, kSettingsCategory);
     });
+}
+
+void TickerBar::set_symbols(const QStringList& symbols) {
+    // De-dupe + uppercase; drop empties. Mirrors commit_edit's hygiene
+    // so a Polygon-supplied list can't break the marquee invariants.
+    QStringList clean;
+    for (const QString& s : symbols) {
+        const QString u = s.trimmed().toUpper();
+        if (!u.isEmpty() && !clean.contains(u)) clean << u;
+    }
+    if (clean.isEmpty() || clean == symbols_) return;
+    symbols_ = clean;
+    // Programmatic update — do NOT persist (user's hand-curated list in
+    // SettingsRepository must survive across these rotations).
+    emit symbols_changed(symbols_);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

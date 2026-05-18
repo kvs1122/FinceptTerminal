@@ -518,7 +518,7 @@ Result<void> StorageManager::clear_workspace_files() {
 
 Result<void> StorageManager::clear_qsettings() {
     LOG_INFO("StorageManager", "Clearing QSettings (window geometry, perspectives, UI state)");
-    QSettings settings("Fincept", "FinceptTerminal");
+    QSettings settings("Fincept", "PinpunchTerminal");
     settings.clear();
     settings.sync();
     emit category_cleared("qsettings");
