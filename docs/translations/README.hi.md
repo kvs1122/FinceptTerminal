@@ -109,7 +109,7 @@ docker run --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix fincept-ter
 > setup.bat                                             # Windows (VS 2022 Developer Cmd)
 >
 > # या मैन्युअल:
-> cd FinceptTerminal/fincept-qt
+> cd FinceptTerminal/pinpunch-qt
 > cmake --preset linux-release   && cmake --build --preset linux-release
 > cmake --preset macos-release   && cmake --build --preset macos-release
 > cmake --preset win-release     && cmake --build --preset win-release
@@ -161,7 +161,7 @@ brew install qt
 
 ```bash
 git clone https://github.com/Fincept-Corporation/FinceptTerminal.git
-cd FinceptTerminal/fincept-qt
+cd FinceptTerminal/pinpunch-qt
 
 # Linux / macOS
 cmake -B build -DCMAKE_BUILD_TYPE=Release
@@ -215,7 +215,7 @@ cmake --build build --config Release --parallel
 **योगदान देना:**नए डेटा कनेक्टर, एआई एजेंट, एनालिटिक्स मॉड्यूल, सी++ स्क्रीन, दस्तावेज़ीकरण
 
 -   [योगदान मार्गदर्शिका](docs/CONTRIBUTING.md)
--   [C++ योगदान मार्गदर्शिका](fincept-qt/CONTRIBUTING.md)
+-   [C++ योगदान मार्गदर्शिका](pinpunch-qt/CONTRIBUTING.md)
 -   [पायथन योगदानकर्ता गाइड](docs/PYTHON_CONTRIBUTOR_GUIDE.md)
 -   [रिपोर्ट बग](https://github.com/Fincept-Corporation/FinceptTerminal/issues)
 -   [फ़ीचर का अनुरोध करें](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)

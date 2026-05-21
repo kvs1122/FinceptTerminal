@@ -2,10 +2,10 @@
 # ============================================================
 
 # ── CMake build output ───────────────────────────────────────
-fincept-qt/build/
-fincept-qt/build-*/
-fincept-qt/build_*/
-fincept-qt/tmpqt/
+pinpunch-qt/build/
+pinpunch-qt/build-*/
+pinpunch-qt/build_*/
+pinpunch-qt/tmpqt/
 tmpqt/
 CMakeCache.txt
 CMakeFiles/
@@ -108,10 +108,10 @@ dist-ssr/
 # ── Claude Code — never commit ───────────────────────────────
 .claude/settings.local.json
 CLAUDE.md
-fincept-qt/DESIGN_SYSTEM.md
+pinpunch-qt/DESIGN_SYSTEM.md
 
 # ── Build output (uitest) ─────────────────────────────────────
-fincept-qt/uitest/build/
+pinpunch-qt/uitest/build/
 
 # ── ML training artifacts ─────────────────────────────────────
 lightning_logs/
@@ -122,17 +122,17 @@ lightning_logs/
 **/tree
 
 # ── Duplicate nested agents folder ───────────────────────────
-fincept-qt/scripts/agents/agents/
+pinpunch-qt/scripts/agents/agents/
 
 # ── Firecrawl research artifacts ─────────────────────────────
 .firecrawl/
 
 # ── Clangd cache ─────────────────────────────────────────────
 .cache/
-fincept-qt/.cache/
+pinpunch-qt/.cache/
 
 # ── Exchange runtime cache ────────────────────────────────────
-fincept-qt/scripts/exchange/.cache/
+pinpunch-qt/scripts/exchange/.cache/
 
 # ── Python test + bench caches ────────────────────────────────
 .pytest_cache/
@@ -150,7 +150,7 @@ fincept-qt/scripts/exchange/.cache/
 *.sqlite3
 
 # ── Internal planning docs ────────────────────────────────────
-fincept-qt/docs/superpowers/
+pinpunch-qt/docs/superpowers/
 docs/superpowers/
 
 # ── Grill-me session notes ────────────────────────────────────
@@ -162,8 +162,8 @@ plans/
 **/plans/
 
 # ── Internal Crypto Center phase notes ────────────────────────
-fincept-qt/docs/CRYPTO_CENTER_PHASE_2.md
-fincept-qt/docs/CRYPTO_CENTER_PHASE_3.md
-fincept-qt/docs/CRYPTO_CENTER_PHASE_4.md
-fincept-qt/docs/CRYPTO_CENTER_PHASE_5.md
-fincept-qt/docs/CRYPTO_WALLET_CONNECT.md
+pinpunch-qt/docs/CRYPTO_CENTER_PHASE_2.md
+pinpunch-qt/docs/CRYPTO_CENTER_PHASE_3.md
+pinpunch-qt/docs/CRYPTO_CENTER_PHASE_4.md
+pinpunch-qt/docs/CRYPTO_CENTER_PHASE_5.md
+pinpunch-qt/docs/CRYPTO_WALLET_CONNECT.md

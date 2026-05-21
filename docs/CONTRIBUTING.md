@@ -79,10 +79,10 @@ setup.bat       # Windows — run from a VS 2022 Developer Command Prompt
 
 ### Manual — CMake presets
 
-All day-to-day development uses presets from `fincept-qt/CMakePresets.json`.
+All day-to-day development uses presets from `pinpunch-qt/CMakePresets.json`.
 
 ```bash
-cd fincept-qt
+cd pinpunch-qt
 
 # Configure (one-time, or after CMakeLists.txt changes)
 cmake --preset win-release        # Windows
@@ -125,7 +125,7 @@ cmake --build build/win-release
 
 ```
 finceptTerminal/
-├── fincept-qt/                 # Main C++ application (all development happens here)
+├── pinpunch-qt/                 # Main C++ application (all development happens here)
 │   ├── src/                    # C++ source
 │   ├── scripts/                # Embedded Python analytics (4000+ files)
 │   ├── resources/              # Icons, assets, Qt resources
@@ -138,7 +138,7 @@ finceptTerminal/
 └── README.md
 ```
 
-### C++ source layout (`fincept-qt/src/`)
+### C++ source layout (`pinpunch-qt/src/`)
 
 ```
 src/
@@ -157,7 +157,7 @@ src/
 └── screens/          # 50+ terminal screens, one subdirectory each
 ```
 
-### Python scripts (`fincept-qt/scripts/`)
+### Python scripts (`pinpunch-qt/scripts/`)
 
 ```
 scripts/
@@ -169,7 +169,7 @@ scripts/
 └── *.py              # 100+ top-level data fetchers (market, gov, economic, alt)
 ```
 
-See `fincept-qt/CLAUDE.md` for the detailed service catalog and architecture rules.
+See `pinpunch-qt/CLAUDE.md` for the detailed service catalog and architecture rules.
 
 ---
 
@@ -192,11 +192,11 @@ See `fincept-qt/CLAUDE.md` for the detailed service catalog and architecture rul
 
 ### UI / design
 
-Follow `fincept-qt/DESIGN_SYSTEM.md` (Obsidian design system). Do not introduce ad-hoc color values, typography, or spacing — use the tokens.
+Follow `pinpunch-qt/DESIGN_SYSTEM.md` (Obsidian design system). Do not introduce ad-hoc color values, typography, or spacing — use the tokens.
 
 ### Mandatory architecture rules (summary)
 
-Full detail in `fincept-qt/CLAUDE.md`. These are **non-negotiable** — PRs that violate them will be sent back:
+Full detail in `pinpunch-qt/CLAUDE.md`. These are **non-negotiable** — PRs that violate them will be sent back:
 
 - **P1.** Never block the UI thread — no `waitForFinished()` on main thread.
 - **P2.** Lazy screen construction — use `register_factory()` for any screen that fetches data.
@@ -204,7 +204,7 @@ Full detail in `fincept-qt/CLAUDE.md`. These are **non-negotiable** — PRs that
 - **P4.** Python subprocesses go through `PythonRunner` (max 3 concurrent).
 - **P6.** Screens render UI only; services do all fetching, caching, processing.
 - **P14.** Logs use the `LOG_*` macros (C++) or `logger` (Python). Never `printf` / `print` / `std::cout`.
-- **D1–D5.** Streaming data flows through the DataHub — never spawn Python directly from a screen. See `fincept-qt/DATAHUB_ARCHITECTURE.md`.
+- **D1–D5.** Streaming data flows through the DataHub — never spawn Python directly from a screen. See `pinpunch-qt/DATAHUB_ARCHITECTURE.md`.
 
 ---
 

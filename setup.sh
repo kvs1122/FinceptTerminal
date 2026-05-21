@@ -204,8 +204,8 @@ echo "  CMAKE_PREFIX_PATH=$QT_PREFIX"
 ok
 
 # ── Step 6: Configure (using CMake preset) ──────────────────
-APP_DIR="$SCRIPT_DIR/fincept-qt"
-[ -d "$APP_DIR" ] || fail "fincept-qt directory not found. Ensure you cloned the full repository."
+APP_DIR="$SCRIPT_DIR/pinpunch-qt"
+[ -d "$APP_DIR" ] || fail "pinpunch-qt directory not found. Ensure you cloned the full repository."
 cd "$APP_DIR"
 
 echo "[6/7] Configuring (preset: $PRESET)..."

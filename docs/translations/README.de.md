@@ -109,7 +109,7 @@ docker run --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix fincept-ter
 > setup.bat                                             # Windows (VS 2022 Developer Cmd)
 >
 > # Oder manuell:
-> cd FinceptTerminal/fincept-qt
+> cd FinceptTerminal/pinpunch-qt
 > cmake --preset linux-release   && cmake --build --preset linux-release
 > cmake --preset macos-release   && cmake --build --preset macos-release
 > cmake --preset win-release     && cmake --build --preset win-release
@@ -149,7 +149,7 @@ Wir gestalten die Zukunft der Finanzanalyse – gemeinsam.
 **Beitragen:**Neue Datenkonnektoren, KI-Agenten, Analysemodule, C++-Bildschirme, Dokumentation
 
 -   [Mitwirkender Leitfaden](docs/CONTRIBUTING.md)
--   [Leitfaden für C++-Beiträge](fincept-qt/CONTRIBUTING.md)
+-   [Leitfaden für C++-Beiträge](pinpunch-qt/CONTRIBUTING.md)
 -   [Leitfaden für Python-Mitwirkende](docs/PYTHON_CONTRIBUTOR_GUIDE.md)
 -   [Fehler melden](https://github.com/Fincept-Corporation/FinceptTerminal/issues)
 -   [Anforderungsfunktion](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)

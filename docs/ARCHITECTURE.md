@@ -61,7 +61,7 @@ This document provides a comprehensive overview of Fincept Terminal v4's archite
 ## Source Architecture
 
 ```
-fincept-qt/src/
+pinpunch-qt/src/
 ├── app/
 │   ├── main.cpp                    # Entry point, QApplication setup
 │   ├── MainWindow.cpp/h            # Main window, layout, screen hosting

@@ -86,7 +86,7 @@ sudo apt install -y \
 ```bash
 # 1. Clone
 git clone https://github.com/Fincept-Corporation/FinceptTerminal.git
-cd FinceptTerminal/fincept-qt
+cd FinceptTerminal/pinpunch-qt
 
 # 2. Configure + Build (pick your platform)
 cmake --preset win-release     && cmake --build --preset win-release     # Windows (Dev Cmd for VS 2022)
@@ -129,7 +129,7 @@ Once the app opens:
 ```
 FinceptTerminal/
 │
-├── fincept-qt/                     ← Main application (you'll work here)
+├── pinpunch-qt/                     ← Main application (you'll work here)
 │   ├── src/                        ← C++ source code
 │   │   ├── app/                    ← Entry point, MainWindow, ScreenRouter
 │   │   ├── core/                   ← Shared infrastructure
@@ -234,7 +234,7 @@ UI updates with data
 ### Workflow 1: Add a New Python Script
 
 ```bash
-cd fincept-qt/scripts
+cd pinpunch-qt/scripts
 
 # Create the script
 # Follow yfinance_data.py pattern: CLI args → JSON stdout
@@ -322,5 +322,5 @@ sudo apt install libgl1-mesa-dev libglu1-mesa-dev
 
 **Ready to contribute?**
 - Pick an issue: https://github.com/Fincept-Corporation/FinceptTerminal/issues
-- Read the C++ guide: [fincept-qt/CONTRIBUTING.md](../fincept-qt/CONTRIBUTING.md)
+- Read the C++ guide: [pinpunch-qt/CONTRIBUTING.md](../pinpunch-qt/CONTRIBUTING.md)
 - Read the Python guide: [PYTHON_CONTRIBUTOR_GUIDE.md](./PYTHON_CONTRIBUTOR_GUIDE.md)

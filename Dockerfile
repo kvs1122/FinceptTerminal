@@ -19,7 +19,7 @@
 #       -t fincept/terminal:4.0.2 --push .
 #       → cross-build both archs in one go
 #
-# Pins (must match fincept-qt/CMakeLists.txt + release.yml):
+# Pins (must match pinpunch-qt/CMakeLists.txt + release.yml):
 #   • Qt 6.8.3 EXACT                — aqtinstall (linux_gcc_64 / linux_gcc_arm64)
 #   • GCC ≥ 12.3                    — Debian trixie g++-13
 #   • CMake 3.27.7                  — Kitware prebuilt (x86_64 / aarch64)
@@ -139,9 +139,9 @@ RUN . /etc/build.env \
 
 # ── Build Fincept Terminal ───────────────────────────────────────────────────
 WORKDIR /src
-COPY fincept-qt/ ./fincept-qt/
+COPY pinpunch-qt/ ./pinpunch-qt/
 
-WORKDIR /src/fincept-qt
+WORKDIR /src/pinpunch-qt
 RUN . /etc/build.env \
     && export CMAKE_PREFIX_PATH="${QT_ROOT}/${QT_VERSION}/${QT_ARCH_PATH}" \
     && export PATH="${CMAKE_PREFIX_PATH}/bin:${PATH}" \
@@ -217,13 +217,13 @@ COPY --from=builder /opt/Qt /opt/Qt
 ENV QT_QPA_PLATFORM=xcb
 
 WORKDIR /app
-COPY --from=builder /src/fincept-qt/build/FinceptTerminal ./FinceptTerminal
-COPY --from=builder /src/fincept-qt/scripts              ./scripts
-COPY --from=builder /src/fincept-qt/resources            ./resources
+COPY --from=builder /src/pinpunch-qt/build/FinceptTerminal ./FinceptTerminal
+COPY --from=builder /src/pinpunch-qt/scripts              ./scripts
+COPY --from=builder /src/pinpunch-qt/resources            ./resources
 
 # QGeoView is a FetchContent dependency built as a shared library next to the
 # binary on Linux. Copy it into /usr/local/lib so the map widget can dlopen it.
-COPY --from=builder /src/fincept-qt/build/_deps/qgeoview-build/lib/ /usr/local/lib/
+COPY --from=builder /src/pinpunch-qt/build/_deps/qgeoview-build/lib/ /usr/local/lib/
 RUN ldconfig \
     && chmod +x ./FinceptTerminal
 

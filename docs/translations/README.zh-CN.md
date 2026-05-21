@@ -109,7 +109,7 @@ docker run --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix fincept-ter
 > setup.bat                                  # Windows（VS 2022 Developer Cmd）
 >
 > # 或采用手动方式：
-> cd FinceptTerminal/fincept-qt
+> cd FinceptTerminal/pinpunch-qt
 > cmake --preset linux-release   && cmake --build --preset linux-release
 > cmake --preset macos-release   && cmake --build --preset macos-release
 > cmake --preset win-release     && cmake --build --preset win-release
@@ -160,7 +160,7 @@ brew install qt
 
 ```bash
 git clone [https://github.com/Fincept-Corporation/FinceptTerminal.git](https://github.com/Fincept-Corporation/FinceptTerminal.git)
-cd FinceptTerminal/fincept-qt
+cd FinceptTerminal/pinpunch-qt
 
 # Linux / macOS
 cmake -B build -DCMAKE_BUILD_TYPE=Release
@@ -218,7 +218,7 @@ cmake --build build --config Release --parallel
 
 
 -   [贡献指南](docs/CONTRIBUTING.md)
--   [C++ 贡献指南](fincept-qt/CONTRIBUTING.md)
+-   [C++ 贡献指南](pinpunch-qt/CONTRIBUTING.md)
 -   [Python 贡献者指南](docs/PYTHON_CONTRIBUTOR_GUIDE.md)
 -   [报告bug](https://github.com/Fincept-Corporation/FinceptTerminal/issues)
 -   [请求新功能](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)

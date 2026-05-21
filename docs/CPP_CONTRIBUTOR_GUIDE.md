@@ -29,7 +29,7 @@ cmake --build --preset <same-preset>
 
 > **Older or RAM-constrained machines:** add `--parallel 4` (or any small number) to cap concurrent compile jobs. The default saturates every core, which can overheat older CPUs and slow the rest of your system. Example: `cmake --build --preset macos-release --parallel 4`.
 
-Debug variants: `win-debug`, `linux-debug`, `macos-debug`. See `fincept-qt/CMakePresets.json`.
+Debug variants: `win-debug`, `linux-debug`, `macos-debug`. See `pinpunch-qt/CMakePresets.json`.
 
 **Emergency override only** — pass `-DFINCEPT_ALLOW_QT_DRIFT=ON` to bypass the Qt `EXACT` check for local experiments. Never commit work built this way; CI rejects it.
 
@@ -52,7 +52,7 @@ The C++ codebase handles:
 ## Project Structure
 
 ```
-fincept-qt/src/
+pinpunch-qt/src/
 ├── app/
 │   ├── main.cpp                    # Entry point, QApplication setup
 │   ├── MainWindow.cpp/h            # Main window, layout, screen hosting

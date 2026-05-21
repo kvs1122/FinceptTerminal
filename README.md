@@ -137,7 +137,7 @@ docker run --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix fincept-ter
 
 ```bash
 git clone https://github.com/Fincept-Corporation/FinceptTerminal.git
-cd FinceptTerminal/fincept-qt
+cd FinceptTerminal/pinpunch-qt
 ```
 
 **Step 1 — Configure** (one-time, or after `CMakeLists.txt` changes):
@@ -231,7 +231,7 @@ We're building the future of financial analysis — together.
 **Contribute:** New data connectors, AI agents, analytics modules, C++ screens, documentation
 
 - [Contributing Guide](docs/CONTRIBUTING.md)
-- [C++ Contributing Guide](fincept-qt/CONTRIBUTING.md)
+- [C++ Contributing Guide](pinpunch-qt/CONTRIBUTING.md)
 - [Python Contributor Guide](docs/PYTHON_CONTRIBUTOR_GUIDE.md)
 - [Report Bug](https://github.com/Fincept-Corporation/FinceptTerminal/issues)
 - [Request Feature](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)

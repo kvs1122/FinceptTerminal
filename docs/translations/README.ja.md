@@ -146,7 +146,7 @@ brew install qt
 
 ```bash
 git clone https://github.com/Fincept-Corporation/FinceptTerminal.git
-cd FinceptTerminal/fincept-qt
+cd FinceptTerminal/pinpunch-qt
 
 # Linux / macOS
 cmake -B build -DCMAKE_BUILD_TYPE=Release
@@ -200,7 +200,7 @@ cmake --build build --config Release --parallel
 **貢献する：**新しいデータ コネクタ、AI エージェント、分析モジュール、C++ 画面、ドキュメント
 
 -   [貢献ガイド](docs/CONTRIBUTING.md)
--   [C++ 貢献ガイド](fincept-qt/CONTRIBUTING.md)
+-   [C++ 貢献ガイド](pinpunch-qt/CONTRIBUTING.md)
 -   [Python 貢献者ガイド](docs/PYTHON_CONTRIBUTOR_GUIDE.md)
 -   [バグを報告する](https://github.com/Fincept-Corporation/FinceptTerminal/issues)
 -   [リクエスト機能](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)

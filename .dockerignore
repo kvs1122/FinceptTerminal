@@ -1,8 +1,8 @@
-fincept-qt/build/
-fincept-qt/build-*/
-fincept-qt/uitest/
-fincept-qt/.vs/
-fincept-qt/cmake-build-*/
+pinpunch-qt/build/
+pinpunch-qt/build-*/
+pinpunch-qt/uitest/
+pinpunch-qt/.vs/
+pinpunch-qt/cmake-build-*/
 build/
 build-*/
 out/
@@ -21,7 +21,7 @@ package.json
 package-lock.json
 funding.json
 updates.json
-fincept_icon.ico
+pinpunch_icon.ico
 setup.sh
 Dockerfile
 .dockerignore
