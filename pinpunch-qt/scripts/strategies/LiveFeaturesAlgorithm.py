@@ -53,8 +53,8 @@ class LiveTradingFeaturesAlgorithm(QCAlgorithm):
             self.market_order('BTC', 100)
 
             ##Send a notification email/SMS/web request on events:
-            self.notify.email("myemail@gmail.com", "Test", "Test Body", "test attachment")
-            self.notify.sms("+11233456789", str(data.time) + ">> Test message from live BTC server.")
+            self.notify.email("", "Test", "Test Body", "test attachment")
+            self.notify.sms("", str(data.time) + ">> Test message from live BTC server.")
             self.notify.web("http://api.quantconnect.com", str(data.time) + ">> Test data packet posted from live BTC server.")
             self.notify.ftp("ftp.quantconnect.com", "username", "password", "path/to/file.txt",
                             str(data.time) + ">> Test file from live BTC server.")
@@ -69,7 +69,7 @@ class LiveTradingFeaturesAlgorithm(QCAlgorithm):
             quantity = int(np.floor(self.portfolio.margin_remaining / data['IBM'].close))
             self.market_order('IBM',quantity)
             self.debug('Purchased IBM on ' + str(self.time.strftime("%m/%d/%Y")))
-            self.notify.email("myemail@gmail.com", "Test", "Test Body", "test attachment")
+            self.notify.email("", "Test", "Test Body", "test attachment")
 
     # Brokerage message event handler. This method is called for all types of brokerage messages.
     def on_brokerage_message(self, message_event):

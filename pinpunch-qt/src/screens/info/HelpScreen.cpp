@@ -158,9 +158,6 @@ HelpScreen::HelpScreen(QWidget* parent) : QWidget(parent) {
             QObject::connect(chip, &QPushButton::clicked, chip, [url]() { QDesktopServices::openUrl(QUrl(url)); });
             return chip;
         };
-        chips_vl->addWidget(make_chip("✉", "support@fincept.in", colors::CYAN, "mailto:support@fincept.in"));
-        chips_vl->addWidget(
-            make_chip("💬", "discord.gg/ae87a8ygbN", colors::POSITIVE, "https://discord.gg/ae87a8ygbN"));
         chips_vl->addWidget(make_chip("🕐", "Mon-Fri  9AM–6PM EST", colors::TEXT_TERTIARY));
         hl->addLayout(chips_vl);
 
@@ -310,7 +307,7 @@ HelpScreen::HelpScreen(QWidget* parent) : QWidget(parent) {
             const char* detail;
         };
         const Step steps[] = {
-            {"1", "Create an account", "Register at fincept.in or use the in-app sign-up."},
+            {"1", "Create an account", "Use the in-app sign-up or run in local-only mode without an account."},
             {"2", "Complete setup", "The setup wizard installs Python and configures your paths."},
             {"3", "Connect a data source", "Add a broker or enable free data feeds in Data Sources."},
             {"4", "Explore the terminal", "Browse Markets, Research, AI Chat, and QuantLib tabs."},
@@ -377,9 +374,6 @@ HelpScreen::HelpScreen(QWidget* parent) : QWidget(parent) {
             const char* url;
         };
         const Contact contacts[] = {
-            {"✉", "Email Support", "support@fincept.in", "mailto:support@fincept.in"},
-            {"💬", "Discord Server", "discord.gg/ae87a8ygbN", "https://discord.gg/ae87a8ygbN"},
-            {"🌐", "Website", "fincept.in", "https://fincept.in"},
             {"📦", "GitHub", "github.com/Fincept-Corporation/PinpunchTerminal",
              "https://github.com/Fincept-Corporation/PinpunchTerminal"},
         };

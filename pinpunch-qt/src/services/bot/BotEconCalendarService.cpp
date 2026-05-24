@@ -12,6 +12,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QSet>
+#include <QTimeZone>
 #include <QUrl>
 #include <QUrlQuery>
 
@@ -141,14 +142,35 @@ void BotEconCalendarService::fetch_and_publish() {
                 mapped["event"]   = e.value("event").toString();
                 mapped["country"] = e.value("country").toString();
 
+                // Finnhub stamps `time` in UTC (e.g. "2026-05-28 12:30:00").
+                // Convert to America/New_York so the dashboard shows release
+                // times in the operator's market-relevant timezone — Core
+                // PCE 12:30 UTC → 08:30 ET, NFP 12:30 UTC → 08:30 ET, ISM
+                // 14:00 UTC → 10:00 ET. Note this can also shift the DATE
+                // for late-UTC events (e.g. 02:00 UTC May 29 = 22:00 ET
+                // May 28), which is correct — we want the local trading-day
+                // date the operator will plan around.
                 QString raw = e.value("time").toString();
                 QString date_part, time_part;
-                int sep = raw.indexOf(' ');
-                if (sep < 0) sep = raw.indexOf('T');
-                if (sep > 0) {
-                    date_part = raw.left(sep);
-                    time_part = raw.mid(sep + 1).left(5);
-                } else { date_part = raw; }
+                QDateTime dt_utc = QDateTime::fromString(raw, "yyyy-MM-dd HH:mm:ss");
+                if (dt_utc.isValid()) {
+                    dt_utc.setTimeSpec(Qt::UTC);
+                    QTimeZone et("America/New_York");
+                    QDateTime dt_et = et.isValid()
+                        ? dt_utc.toTimeZone(et)
+                        : dt_utc;  // fall through to UTC if tz db missing
+                    date_part = dt_et.toString("yyyy-MM-dd");
+                    time_part = dt_et.toString("HH:mm");
+                } else {
+                    // Pre-2025 Finnhub format or malformed — degrade to old
+                    // split behaviour rather than dropping the row.
+                    int sep = raw.indexOf(' ');
+                    if (sep < 0) sep = raw.indexOf('T');
+                    if (sep > 0) {
+                        date_part = raw.left(sep);
+                        time_part = raw.mid(sep + 1).left(5);
+                    } else { date_part = raw; }
+                }
                 mapped["date"] = date_part;
                 mapped["time"] = time_part;
 
@@ -182,14 +204,30 @@ void BotEconCalendarService::fetch_and_publish() {
                 mapped["event"]   = e.value("event").toString();
                 mapped["country"] = e.value("country").toString();
 
+                // FMP stamps in ISO-8601 with timezone offset (e.g.
+                // "2026-05-28T12:30:00+0000"). Parse via Qt::ISODate so
+                // the offset is honoured, then convert to ET. Same
+                // reasoning as the Finnhub path above.
                 QString raw = e.value("date").toString();
                 QString date_part, time_part;
-                int sep = raw.indexOf('T');
-                if (sep < 0) sep = raw.indexOf(' ');
-                if (sep > 0) {
-                    date_part = raw.left(sep);
-                    time_part = raw.mid(sep + 1).left(5);
-                } else { date_part = raw; }
+                QDateTime dt = QDateTime::fromString(raw, Qt::ISODateWithMs);
+                if (!dt.isValid())
+                    dt = QDateTime::fromString(raw, Qt::ISODate);
+                if (dt.isValid()) {
+                    if (dt.timeSpec() == Qt::LocalTime)
+                        dt.setTimeSpec(Qt::UTC);   // FMP defaults to UTC
+                    QTimeZone et("America/New_York");
+                    QDateTime dt_et = et.isValid() ? dt.toTimeZone(et) : dt;
+                    date_part = dt_et.toString("yyyy-MM-dd");
+                    time_part = dt_et.toString("HH:mm");
+                } else {
+                    int sep = raw.indexOf('T');
+                    if (sep < 0) sep = raw.indexOf(' ');
+                    if (sep > 0) {
+                        date_part = raw.left(sep);
+                        time_part = raw.mid(sep + 1).left(5);
+                    } else { date_part = raw; }
+                }
                 mapped["date"] = date_part;
                 mapped["time"] = time_part;
 

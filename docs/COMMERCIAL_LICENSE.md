@@ -3,7 +3,7 @@
 **Version:** 2.0
 **In effect from:** April 30, 2026 (and continuing in force until superseded by a subsequent version published by Fincept Corporation)
 **Licensor:** Fincept Corporation (a company organized under the laws of India)
-**Contact:** support@fincept.in · +91-9773034108 · https://fincept.in
+**Contact:**  ·  · 
 
 ---
 
@@ -88,7 +88,7 @@ A Commercial License is required for **all** of the following — there are no e
 - Training, evaluation, demonstration, or onboarding of employees or contractors of any for-profit entity
 - Any use that competes with, substitutes for, or substantially replicates the functionality of Fincept Terminal or any product or service offered by Licensor
 
-If you are uncertain, **assume a Commercial License is required** and contact support@fincept.in.
+If you are uncertain, **assume a Commercial License is required** and contact .
 
 ---
 
@@ -117,7 +117,7 @@ Licensee acknowledges that the value of the Fincept Marks lies not only in the l
 
 **Burden of Independent Creation.** Where Licensee or any Third-Party Developer asserts independent creation as a defense to a Derivative Work claim, the burden of proving independent creation rests on the alleged infringer, to be evidenced by contemporaneous design documents, complete commit history, personnel certifications, and clean-room development records, all of which shall be produced to Licensor on demand.
 
-Any Derivative Work that is publicly distributed in source-available form shall prominently display the notice: *"Derived from Fincept Terminal © Fincept Corporation; use of this Derivative Work for Commercial Use requires a separate Commercial License from Fincept Corporation, support@fincept.in."*
+Any Derivative Work that is publicly distributed in source-available form shall prominently display the notice: *"Derived from Fincept Terminal © Fincept Corporation; use of this Derivative Work for Commercial Use requires a separate Commercial License from Fincept Corporation, ."*
 
 ---
 
@@ -146,7 +146,7 @@ Subject to the terms of this License, Licensor grants Licensee a non-exclusive, 
 
 Licensor may, upon thirty (30) days' written notice and not more than once per twelve (12) month period (except where Licensor reasonably suspects breach), audit Licensee's use of the Software through a mutually agreed independent auditor bound by confidentiality. Licensee shall provide reasonable cooperation, including access to deployment records, user counts, infrastructure inventories, and source repositories containing the Software or Derivative Works. If the audit reveals underpayment exceeding five percent (5%) or any unauthorized Commercial Use, Licensee shall pay (a) the unpaid fees calculated retroactively at the then-current rate, (b) interest at 18% per annum or the maximum permitted by law, whichever is lower, and (c) the reasonable costs of the audit.
 
-**Annual Self-Attestation.** Every for-profit user of the Software shall submit, by 31 January of each calendar year, a written attestation to support@fincept.in stating its license status, the number of users, the number of deployments, and the legal entity name(s) using the Software. Failure to file the attestation is a per se breach triggering the liquidated damages set forth in Section 13.
+**Annual Self-Attestation.** Every for-profit user of the Software shall submit, by 31 January of each calendar year, a written attestation to  stating its license status, the number of users, the number of deployments, and the legal entity name(s) using the Software. Failure to file the attestation is a per se breach triggering the liquidated damages set forth in Section 13.
 
 **Privacy and Trade-Secret Limitations.** Where applicable data-protection law (including the EU General Data Protection Regulation, the Digital Personal Data Protection Act, 2023 (India), or analogous statutes) restricts disclosure of personal data, Licensor shall accept anonymized or pseudonymized data sufficient to verify compliance, comprising at minimum: (i) total user count, (ii) total deployment count, (iii) entity legal name, and (iv) hashed code-base fingerprints. Licensee bears the cost of any data-protection compliance for audit response. Where Licensee asserts trade-secret protection over its source code, Licensor will accept code review by an escrow agent operating under attorney-client privilege, with results delivered as compliance status only. Confidentiality obligations to third parties (NDAs with Licensee's clients) shall not impair Licensor's audit rights; Licensee shall use commercially reasonable efforts to obtain any necessary client consent or shall provide redacted equivalent information. Where applicable foreign blocking statute genuinely prevents disclosure, Licensee shall provide equivalent information from a permitted jurisdiction or pay liquidated damages in lieu of audit pursuant to Section 13.
 
@@ -178,7 +178,7 @@ Licensor actively monitors public code repositories, container registries, appli
 4. Pursue trademark infringement, passing-off, and unfair-competition claims for misuse of the Fincept Marks or Fincept Trade Dress;
 5. Pursue criminal complaints where applicable under the Copyright Act, 1957 (India) §§ 63–63B and equivalent foreign laws.
 
-If you believe you may be using the Software commercially without a license, contact **support@fincept.in** for a good-faith resolution path.
+If you believe you may be using the Software commercially without a license, contact **** for a good-faith resolution path.
 
 ---
 
@@ -285,7 +285,7 @@ This License shall be governed by and construed in accordance with the laws of t
 
 **Force Majeure.** Neither party is liable for failure to perform due to causes beyond its reasonable control, excluding payment obligations.
 
-**Notices.** Notices to Licensor must be sent to support@fincept.in with a copy by registered post to Fincept Corporation's registered office.
+**Notices.** Notices to Licensor must be sent to  with a copy by registered post to Fincept Corporation's registered office.
 
 **Export Controls.** Licensee shall comply with all applicable export-control laws of India, the United States, the European Union, and any other applicable jurisdiction.
 
@@ -295,7 +295,7 @@ This License shall be governed by and construed in accordance with the laws of t
 
 ## 18. How to Obtain a Commercial License
 
-1. **Contact** — email **support@fincept.in** with: (a) legal name of the organization, (b) country of incorporation, (c) intended use case, (d) number of users, (e) whether you are using or plan to use a Modified Version or Derivative Work.
+1. **Contact** — email **** with: (a) legal name of the organization, (b) country of incorporation, (c) intended use case, (d) number of users, (e) whether you are using or plan to use a Modified Version or Derivative Work.
 2. **Agreement** — review and execute the Commercial License Agreement (this document, formalized as an Order Form).
 3. **Payment** — complete payment in accordance with the Order Form.
 4. **Access** — receive credentials and Commercial Use rights.

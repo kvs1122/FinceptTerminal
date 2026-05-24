@@ -144,23 +144,31 @@ def get_8k_events_categorized(ticker: str, limit: int = 30) -> Dict[str, Any]:
             if count >= limit:
                 break
 
-            items = filing.items if hasattr(filing, 'items') else []
-            items_str = ','.join(items) if items else ''
+            # filing.items may be a comma-separated string ("2.02,9.01") or a list,
+            # depending on edgartools version. Normalize to a set of exact item codes
+            # so substring checks can't false-match (e.g. '1.01' in '11.01').
+            items_raw = filing.items if hasattr(filing, 'items') else []
+            if isinstance(items_raw, str):
+                items_list = [s.strip() for s in items_raw.split(',') if s.strip()]
+            else:
+                items_list = [str(s).strip() for s in items_raw]
+            items_set = set(items_list)
 
             event = {
                 "accession_number": filing.accession_number,
                 "filing_date": str(filing.filing_date),
-                "items": items
+                "items": items_list
             }
 
-            # Categorize by item number
-            if '2.02' in items_str:  # Results of Operations
+            # Categorize by item number (priority order: a filing with 2.02 + 9.01
+            # is primarily an earnings release, etc.)
+            if '2.02' in items_set:  # Results of Operations
                 categories["earnings"].append(event)
-            elif any(x in items_str for x in ['5.02', '5.03']):  # Management changes
+            elif items_set & {'5.02', '5.03'}:  # Management changes
                 categories["management_changes"].append(event)
-            elif '1.01' in items_str:  # Material Agreement
+            elif '1.01' in items_set:  # Material Agreement
                 categories["agreements"].append(event)
-            elif any(x in items_str for x in ['1.02', '2.01']):  # M&A
+            elif items_set & {'1.02', '2.01'}:  # M&A
                 categories["mergers_acquisitions"].append(event)
             else:
                 categories["other"].append(event)

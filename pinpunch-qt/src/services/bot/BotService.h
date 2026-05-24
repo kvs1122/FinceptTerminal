@@ -64,6 +64,24 @@ class BotService : public QObject, public fincept::datahub::Producer {
     // Helpers
     static void register_metatypes();
     QString     today_news_jsonl_path() const;     // logs/alpaca_news_raw/YYYY-MM-DD.jsonl
+    QString     lane_log_path() const;             // claude_alpha.log (bot stdout log)
+
+    /// Tail claude_alpha.log from `lane_log_pos_` forward, parse any new
+    /// "📡 WS-Macro [LANE N ...] (...): headline" lines, and record the
+    /// {normalized-headline-prefix → lane-number} mapping into
+    /// `news_lane_by_key_`. Strictly read-only — never touches the bot.
+    /// Called from refresh_news() right before the JSONL → news:general bridge.
+    void ingest_lane_log();
+
+    /// Normalize a headline for log↔jsonl matching.
+    /// - lowercase
+    /// - HTML-decode common Benzinga entities (&#39; → ', &amp; → &, &quot; → ", &lt;/gt;)
+    /// - collapse all whitespace runs to a single space
+    /// - trim
+    /// - take first kHeadlineMatchPrefixLen chars
+    /// The log truncates headlines at ~80 chars; we use a shorter prefix to
+    /// give a margin against truncation midword.
+    static QString normalize_headline_for_match(const QString& headline);
 
     bool initialized_ = false;
     QFileSystemWatcher* file_watcher_ = nullptr;
@@ -73,6 +91,16 @@ class BotService : public QObject, public fincept::datahub::Producer {
     QString news_file_path_cached_;
     QVector<BotNewsItem> news_buffer_;   // last N entries
     static constexpr int kNewsBufferMax = 100;
+
+    // ─── Lane-filter state (claude_alpha.log tailer) ─────────────────────
+    // Populated by ingest_lane_log(); consumed by refresh_news() when
+    // building the bridged news:general payload. Lane 1 = IMMEDIATE,
+    // Lane 2 = BATCH (both shown), Lane 3 = DROP (filtered out).
+    qint64  lane_log_pos_ = 0;
+    QString lane_log_path_cached_;
+    QHash<QString, int> news_lane_by_key_;
+    static constexpr int kHeadlineMatchPrefixLen = 50;
+    static constexpr int kLaneMapMaxEntries      = 5000;
 };
 
 } // namespace fincept::services::bot

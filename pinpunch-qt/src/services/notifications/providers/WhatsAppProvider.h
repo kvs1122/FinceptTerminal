@@ -22,8 +22,8 @@ class WhatsAppProvider final : public BaseProvider {
   public:
     QString account_sid_;
     QString auth_token_;
-    QString from_number_; // whatsapp:+14155238886
-    QString to_number_;   // whatsapp:+1XXXXXXXXXX
+    QString from_number_; // user-configured WhatsApp sender (whatsapp:+...)
+    QString to_number_;   // user-configured WhatsApp recipient (whatsapp:+...)
 };
 
 } // namespace fincept::notifications

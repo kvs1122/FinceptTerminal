@@ -74,7 +74,7 @@ FinceptTerminal 採用雙授權制：
 1. 本分支的 `LICENSE` 檔案完整保留 AGPL-3.0 全文
 2. 每個修改的檔案頭部都有明確的原始來源聲明
 3. README 頂部清楚標示這是社群貢獻分支，非官方版本
-4. 若你有商業需求，請聯絡 Fincept Corporation：support@fincept.in
+4. 若你有商業需求，請聯絡 Fincept Corporation：
 
 ---
 

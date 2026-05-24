@@ -232,14 +232,6 @@ AboutScreen::AboutScreen(QWidget* parent) : QWidget(parent) {
             bvl->addWidget(makeBullet("Custom integration options available"));
             pvl->addWidget(body);
 
-            // Footer link
-            auto* foot = new QLabel("support@fincept.in");
-            foot->setStyleSheet(QString("color: %1; font-size: 11px; background: transparent; "
-                                        "padding: 6px 14px; border-top: 1px solid %2; "
-                                        "font-family: 'Consolas','Courier New',monospace;")
-                                    .arg(ui::colors::CYAN(), ui::colors::BORDER_DIM()));
-            pvl->addWidget(foot);
-
             rl->addWidget(panel, 1);
         }
 
@@ -302,10 +294,9 @@ AboutScreen::AboutScreen(QWidget* parent) : QWidget(parent) {
              "https://github.com/Fincept-Corporation/PinpunchTerminal/blob/main/docs/COMMERCIAL_LICENSE.md"},
             {"Trademark Policy", "https://github.com/Fincept-Corporation/PinpunchTerminal/blob/main/docs/TRADEMARK.md"},
             {"Contributor CLA", "https://github.com/Fincept-Corporation/PinpunchTerminal/blob/main/docs/CLA.md"},
-            {"Official Website", "https://fincept.in"},
         };
 
-        for (int i = 0; i < 6; ++i) {
+        for (int i = 0; i < 5; ++i) {
             auto* btn = new QPushButton(links[i].label);
             btn->setStyleSheet(LINK_BTN());
             btn->setFixedHeight(36);
@@ -337,10 +328,10 @@ AboutScreen::AboutScreen(QWidget* parent) : QWidget(parent) {
             QString email;
         };
         const Contact contacts[] = {
-            {"GENERAL", "support@fincept.in"},
-            {"COMMERCIAL", "support@fincept.in"},
-            {"SECURITY", "support@fincept.in"},
-            {"LEGAL", "support@fincept.in"},
+            {"GENERAL", ""},
+            {"COMMERCIAL", ""},
+            {"SECURITY", ""},
+            {"LEGAL", ""},
         };
 
         for (int i = 0; i < 4; ++i) {

@@ -34,7 +34,7 @@ from corporateFinance.deal_database.database_schema import MADatabase
 # ---------------------------------------------------------------------------
 
 _EDGAR_HEADERS = {
-    "User-Agent": "Fincept Terminal contact@fincept.in",   # SEC requires a valid UA
+    "User-Agent": "Pinpunch Terminal venkat.k0822@gmail.com",   # SEC requires a valid UA
     "Accept": "application/json",
 }
 

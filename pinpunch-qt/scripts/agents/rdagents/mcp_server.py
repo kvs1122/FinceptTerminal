@@ -478,7 +478,13 @@ def build_mcp_server() -> Any:
 def main() -> None:
     import argparse
 
-    parser = argparse.ArgumentParser(description="Fincept MCP server for RD-Agent")
+    parser = argparse.ArgumentParser(description="Pinpunch MCP server")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "http"],
+        default="http",
+        help="stdio for Claude Desktop / Cowork local connector; http for remote use",
+    )
     parser.add_argument("--port", type=int, default=18765)
     parser.add_argument("--host", default="127.0.0.1")
     args = parser.parse_args()
@@ -488,8 +494,25 @@ def main() -> None:
         raise SystemExit(1)
 
     server = build_mcp_server()
-    print(f"Fincept MCP server starting on http://{args.host}:{args.port}/mcp", flush=True)
-    server.run(transport="streamable-http", host=args.host, port=args.port, path="/mcp")
+
+    if args.transport == "stdio":
+        # Claude Desktop / Cowork spawns this as a subprocess and talks JSON-RPC
+        # over stdin/stdout. No port, no HTTP. Do NOT print to stdout — that
+        # would corrupt the JSON-RPC stream. All logging must go to stderr.
+        import sys
+        print("Pinpunch MCP server starting (stdio transport)", file=sys.stderr, flush=True)
+        server.run(transport="stdio")
+        return
+
+    # HTTP transport (for remote use / curl testing)
+    print(f"Pinpunch MCP server starting on http://{args.host}:{args.port}/mcp", flush=True)
+    try:
+        server.settings.host = args.host
+        server.settings.port = args.port
+        server.settings.streamable_http_path = "/mcp"
+        server.run(transport="streamable-http")
+    except (AttributeError, TypeError):
+        server.run(transport="streamable-http", host=args.host, port=args.port, path="/mcp")
 
 
 if __name__ == "__main__":

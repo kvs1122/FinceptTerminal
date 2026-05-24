@@ -273,7 +273,7 @@ class ModelsRegistry:
             "models": ["fincept-llm"],
             "api_key_env": "FINCEPT_API_KEY",
             "default_model": "fincept-llm",
-            "base_url": "https://api.fincept.in/research/llm",
+            "base_url": "",  # Local-only mode: Fincept managed LLM disabled
         },
     }
 

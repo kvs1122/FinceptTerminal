@@ -211,7 +211,7 @@ void LoginScreen::build_login_page() {
     vl->addWidget(email_lbl);
 
     email_input_ = new QLineEdit;
-    email_input_->setPlaceholderText("user@domain.com");
+    email_input_->setPlaceholderText("Enter your email");
     email_input_->setFixedHeight(34);
     email_input_->setStyleSheet(input_style());
     vl->addWidget(email_input_);

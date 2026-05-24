@@ -10,7 +10,7 @@
 
 Plataforma de inteligencia financiera de última generación con análisis financiero de nivel institucional, automatización de IA y conectividad de datos ilimitada.
 
-[📥 Descargar](https://github.com/Fincept-Corporation/FinceptTerminal/releases)·[📚 Documentos](https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs)·[💬 Discusiones](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)·[💬 Discordia](https://discord.gg/ae87a8ygbN)·[🤝 Socio](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
+[📥 Descargar](https://github.com/Fincept-Corporation/FinceptTerminal/releases)·[📚 Documentos](https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs)·[💬 Discusiones](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)·[🤝 Socio](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 ![Fincept Terminal](https://raw.githubusercontent.com/Fincept-Corporation/FinceptTerminal/main/images/Dashboard.png)
 
@@ -165,7 +165,7 @@ Estamos construyendo juntos el futuro del análisis financiero.
 -   Perfecto para cursos de finanzas, economía y ciencia de datos
 -   Análisis integrado de renta variable, cartera, derivados, renta fija y economía
 
-**¿Interesado?**Correo electrónico**[support@fincept.in](mailto:support@fincept.in)**con el nombre de su institución.
+**¿Interesado?**Correo electrónico****con el nombre de su institución.
 
 [Detalles de la licencia universitaria](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
@@ -184,7 +184,7 @@ Estamos construyendo juntos el futuro del análisis financiero.
 ### Licencia Comercial
 
 -   Requerido para uso comercial o para acceder comercialmente a Fincept Data/API
--   Contacto:**[support@fincept.in](mailto:support@fincept.in)**
+-   Contacto:****
 -   Detalles:[Guía de licencia comercial](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 ### Marcas registradas
@@ -209,7 +209,7 @@ Estamos construyendo juntos el futuro del análisis financiero.
 </a>
 </div>
 
-[![Email](https://img.shields.io/badge/Email-support@fincept.in-blue)](mailto:support@fincept.in)
+
 
 ⭐**Estrella**· 🔄**Compartir**· 🤝**Contribuir**
 

@@ -10,7 +10,7 @@
 
 最先进的金融情报平台，具有机构级金融分析、人工智能自动化和无限数据连接。
 
-[📥 下载](https://github.com/Fincept-Corporation/FinceptTerminal/releases)·[📚 文档](https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs)·[💬 讨论](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)·[💬 Discord](https://discord.gg/ae87a8ygbN)·[🤝 合作伙伴](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
+[📥 下载](https://github.com/Fincept-Corporation/FinceptTerminal/releases)·[📚 文档](https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs)·[💬 讨论](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)·[🤝 合作伙伴](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 ![Fincept Terminal](https://raw.githubusercontent.com/Fincept-Corporation/FinceptTerminal/main/images/Dashboard.png)
 
@@ -234,7 +234,7 @@ cmake --build build --config Release --parallel
 -   非常适合金融、经济学和数据科学课程
 -   内置股票、投资组合、衍生品、固定收益和经济学分析
 
-**感兴趣吗？** 请附上您的机构名称，发送电子邮件至**[support@fincept.in]。
+**感兴趣吗？** 请附上您的机构名称，发送电子邮件至**[]。
 [大学许可详细信息](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 * * *
@@ -252,7 +252,7 @@ cmake --build build --config Release --parallel
 ### 商业许可
 
 -   若用于商业用途或需要商业级访问 Fincept 数据/API 时必备
--   联系方式：**[support@fincept.in](mailto:support@fincept.in)**
+-   联系方式：****
 -   细节：[商业许可指南](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 ### 商标声明
@@ -277,7 +277,7 @@ cmake --build build --config Release --parallel
 </a>
 </div>
 
-[![Email](https://img.shields.io/badge/Email-support@fincept.in-blue)](mailto:support@fincept.in)
+
 
 ⭐**支持**· 🔄**分享**· 🤝**贡献**
 

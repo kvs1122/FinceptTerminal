@@ -87,7 +87,7 @@ static QVector<ConnectorConfig> alt_data_configs() {
          true,
          true,
          {{"appKey", "App Key", FieldType::Password, "your-app-key", true, "", {}},
-          {"username", "Username", FieldType::Text, "user@firm.com", false, "", {}},
+          {"username", "Username", FieldType::Text, "Username", false, "", {}},
           {"password", "Password", FieldType::Password, "", false, "", {}},
           {"ric", "Default RIC", FieldType::Text, "AAPL.O", false, "", {}},
           {"fields",

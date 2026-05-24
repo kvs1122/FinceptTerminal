@@ -90,8 +90,9 @@ class UpdateService : public QObject {
     void show_error(const QString& text);
     QWidget* dialog_parent();
 
-    static constexpr const char* DEFAULT_MANIFEST_URL =
-        "https://raw.githubusercontent.com/Fincept-Corporation/PinpunchTerminal/main/updates.json";
+    // Local-only mode: default manifest URL emptied so even if check_for_updates
+    // is re-enabled, no request is sent unless the user explicitly sets it.
+    static constexpr const char* DEFAULT_MANIFEST_URL = "";
 
     QNetworkAccessManager net_;
     QString manifest_url_ = DEFAULT_MANIFEST_URL;

@@ -56,7 +56,7 @@ QString LlmService::get_models_url(const QString& provider, const QString& api_k
     if (p == "xai")      return "https://api.x.ai/v1/models";
     if (p == "cerebras") return "https://api.cerebras.ai/v1/models";
     if (p == "kimi")     return "https://api.moonshot.ai/v1/models";
-    if (p == "fincept")  return "https://api.fincept.in/research/llm/models";  // Pinpunch hides this provider in the picker — kept for old DBs
+    if (p == "fincept")  return "";  // Local-only mode: Fincept LLM provider disabled (no remote endpoint)
     // minimax has no public /v1/models — caller falls back to known models.
     return {};
 }

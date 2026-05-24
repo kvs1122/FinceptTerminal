@@ -468,9 +468,10 @@ std::vector<ToolDef> get_news_tools() {
     {
         ToolDef t;
         t.name = "analyze_news_article";
-        t.description = "Run AI sentiment + market-impact + risk analysis on a single article URL. "
+        t.description = "Run AI sentiment + market-impact + risk analysis on a single cached news article URL. "
                         "Returns sentiment score, urgency, key points, and regulatory/geopolitical/"
-                        "operational/market risk signals. Consumes API credits.";
+                        "operational/market risk signals. Runs locally via the configured Cerebras key — "
+                        "the article must already be in the news cache (Cerebras can't fetch URLs).";
         t.category = "news";
         t.input_schema.properties =
             QJsonObject{{"url", QJsonObject{{"type", "string"}, {"description", "Article URL"}}}};

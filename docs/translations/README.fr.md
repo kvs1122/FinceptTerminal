@@ -10,7 +10,7 @@
 
 Plateforme de renseignement financier de pointe avec analyses financières de niveau institutionnel, automatisation de l'IA et connectivité de données illimitée.
 
-[📥 Télécharger](https://github.com/Fincept-Corporation/FinceptTerminal/releases)·[📚 Documents](https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs)·[💬 Discussions](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)·[💬 Discorde](https://discord.gg/ae87a8ygbN)·[🤝 Partenaire](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
+[📥 Télécharger](https://github.com/Fincept-Corporation/FinceptTerminal/releases)·[📚 Documents](https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs)·[💬 Discussions](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)·[🤝 Partenaire](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 ![Fincept Terminal](https://raw.githubusercontent.com/Fincept-Corporation/FinceptTerminal/main/images/Dashboard.png)
 
@@ -230,7 +230,7 @@ Nous construisons l’avenir de l’analyse financière – ensemble.
 -   Parfait pour les cours de finance, d'économie et de science des données
 -   Analyses intégrées actions, portefeuille, dérivés, taux et économie
 
-**Intéressé?**E-mail**[support@fincept.in](mailto:support@fincept.in)**avec le nom de votre établissement.
+**Intéressé?**E-mail****avec le nom de votre établissement.
 
 [Détails de la licence universitaire](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
@@ -249,7 +249,7 @@ Nous construisons l’avenir de l’analyse financière – ensemble.
 ### Licence commerciale
 
 -   Requis pour un usage professionnel ou pour accéder commercialement aux données/API Fincept
--   Contact:**[support@fincept.in](mailto:support@fincept.in)**
+-   Contact:****
 -   Détails:[Guide des licences commerciales](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 ### Marques déposées
@@ -274,7 +274,7 @@ Nous construisons l’avenir de l’analyse financière – ensemble.
 </a>
 </div>
 
-[![Email](https://img.shields.io/badge/Email-support@fincept.in-blue)](mailto:support@fincept.in)
+
 
 ⭐**Étoile**· 🔄**Partager**· 🤝**Contribuer**
 

@@ -21,9 +21,9 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-# Fincept hosted LLM endpoint
-_FINCEPT_LLM_URL   = "https://api.fincept.in/research/llm"
-_FINCEPT_LLM_ASYNC = "https://api.fincept.in/research/llm/async"
+# Local-only mode: Fincept-hosted LLM endpoints disabled (no remote calls).
+_FINCEPT_LLM_URL   = ""
+_FINCEPT_LLM_ASYNC = ""
 _DEFAULT_TIMEOUT   = 120  # seconds
 
 # System prompts for each specialist role

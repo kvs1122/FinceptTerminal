@@ -92,4 +92,4 @@ If you're contributing for the list and not for the product, this isn't the righ
 ## Questions before you code?
 
 - Ask on the issue before writing code. Maintainers are happy to scope-approve early.
-- [support@fincept.in](mailto:support@fincept.in) · [Discord](https://discord.gg/ae87a8ygbN)
+-  · 

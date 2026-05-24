@@ -116,10 +116,8 @@ ContactScreen::ContactScreen(QWidget* parent) : QWidget(parent) {
         grid->setContentsMargins(14, 12, 14, 12);
         grid->setSpacing(10);
 
-        grid->addWidget(make_contact_card("EMAIL SUPPORT", "support@fincept.in", "Response within 4-6 hours"), 0, 0);
-        grid->addWidget(make_contact_card("PHONE SUPPORT", "+1-800-PINPUNCH", "Mon-Fri, 9AM-6PM EST"), 0, 1);
-        grid->addWidget(make_contact_card("SUPPORT HOURS", "Mon-Fri 9AM-6PM EST", "Saturday 10AM-4PM EST"), 1, 0);
-        grid->addWidget(make_contact_card("OFFICE", "Fincept Corporation", "New York, United States"), 1, 1);
+        grid->addWidget(make_contact_card("SUPPORT HOURS", "Mon-Fri 9AM-6PM EST", "Saturday 10AM-4PM EST"), 0, 0);
+        grid->addWidget(make_contact_card("OFFICE", "Pinpunch Terminal", "Personal Edition"), 0, 1);
 
         pvl->addWidget(body);
         vl->addWidget(panel);
@@ -152,16 +150,6 @@ ContactScreen::ContactScreen(QWidget* parent) : QWidget(parent) {
                                    .arg(colors::BG_RAISED(), colors::CYAN(), colors::BORDER_DIM(), colors::BG_HOVER()));
             return btn;
         };
-
-        auto* email_btn = make_action("Send Email");
-        connect(email_btn, &QPushButton::clicked, this,
-                []() { QDesktopServices::openUrl(QUrl("mailto:support@fincept.in")); });
-        hl->addWidget(email_btn);
-
-        auto* discord_btn = make_action("Join Discord");
-        connect(discord_btn, &QPushButton::clicked, this,
-                []() { QDesktopServices::openUrl(QUrl("https://discord.gg/ae87a8ygbN")); });
-        hl->addWidget(discord_btn);
 
         auto* github_btn = make_action("GitHub Issues");
         connect(github_btn, &QPushButton::clicked, this, []() {
@@ -196,7 +184,7 @@ ContactScreen::ContactScreen(QWidget* parent) : QWidget(parent) {
         };
         const Issue issues[] = {
             {"Cannot log in or forgot password",
-             "Use the Forgot Password option on the login screen, or contact support@fincept.in"},
+             "Use the Forgot Password option on the login screen."},
             {"Python setup fails or times out",
              "Ensure you have a stable internet connection. Retry setup or check firewall settings."},
             {"Data not loading or showing stale",

@@ -119,12 +119,9 @@ You DON'T need a commercial license if you:
 - Contribute to the open-source project
 
 ================================================================================
-CONTACT INFORMATION
+PROJECT INFORMATION
 ================================================================================
 
-Email: support@fincept.in
-Phone: +91-9773034108
-Website: https://fincept.in
 Repository: https://github.com/Fincept-Corporation/FinceptTerminal
 Documentation: https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs
 

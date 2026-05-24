@@ -256,17 +256,19 @@ void DashboardStatusBar::update_memory() {
 }
 
 void DashboardStatusBar::ping_api() {
-    QNetworkRequest req(QUrl("https://api.fincept.in/health"));
-    req.setTransferTimeout(5000);
-    ping_elapsed_.restart();
-    QNetworkReply* reply = nam_->get(req);
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        reply->deleteLater();
-        set_latency(reply->error() == QNetworkReply::NoError ? static_cast<int>(ping_elapsed_.elapsed()) : -1);
-    });
+    // Local-only mode: no phone-home beacon. The latency label is hidden /
+    // shows OFF instead of pinging any remote host.
+    set_latency(-2);
 }
 
 void DashboardStatusBar::set_latency(int ms) {
+    if (ms == -2) {
+        // Sentinel from ping_api(): local-only mode, beacon intentionally disabled.
+        latency_label_->setText("LAT: OFF");
+        latency_label_->setStyleSheet(
+            QString("color:%1;font-weight:bold;background:transparent;").arg(ui::colors::TEXT_TERTIARY()));
+        return;
+    }
     if (ms < 0) {
         latency_label_->setText("LAT: ERR");
         latency_label_->setStyleSheet(

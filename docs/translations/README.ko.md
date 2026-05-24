@@ -10,7 +10,7 @@
 
 기관급 금융 분석, AI 자동화 및 무제한 데이터 연결을 갖춘 최첨단 금융 인텔리전스 플랫폼입니다.
 
-[📥 다운로드](https://github.com/Fincept-Corporation/FinceptTerminal/releases)·[📚 문서](https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs)·[💬 토론](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)·[💬 불화](https://discord.gg/ae87a8ygbN)·[🤝 파트너](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
+[📥 다운로드](https://github.com/Fincept-Corporation/FinceptTerminal/releases)·[📚 문서](https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs)·[💬 토론](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)·[🤝 파트너](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 ![Fincept Terminal](https://raw.githubusercontent.com/Fincept-Corporation/FinceptTerminal/main/images/Dashboard.png)
 
@@ -216,7 +216,7 @@ cmake --build build --config Release --parallel
 -   금융, 경제, 데이터 과학 과정에 적합
 -   주식·포트폴리오·파생상품·채권·경제학 분석 내장
 
-**관심 있는?**이메일**[support@fincept.in](mailto:support@fincept.in)**귀하의 기관 이름으로.
+**관심 있는?**이메일****귀하의 기관 이름으로.
 
 [대학 라이센스 세부정보](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
@@ -235,7 +235,7 @@ cmake --build build --config Release --parallel
 ### 상업용 라이센스
 
 -   업무용으로 사용하거나 Fincept 데이터/API에 상업적으로 액세스하는 데 필요합니다.
--   연락하다:**[support@fincept.in](mailto:support@fincept.in)**
+-   연락하다:****
 -   세부:[상용 라이센스 가이드](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 ### 상표
@@ -260,7 +260,7 @@ cmake --build build --config Release --parallel
 </a>
 </div>
 
-[![Email](https://img.shields.io/badge/Email-support@fincept.in-blue)](mailto:support@fincept.in)
+
 
 ⭐**별**· 🔄**공유하다**· 🤝**기여하다**
 

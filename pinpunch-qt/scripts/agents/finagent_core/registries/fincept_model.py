@@ -79,7 +79,7 @@ def _rate_limit_fincept() -> None:
             except Exception:
                 pass
 
-FINCEPT_DEFAULT_URL = "https://api.fincept.in/research/llm"
+FINCEPT_DEFAULT_URL = ""  # Local-only mode: Fincept managed LLM disabled
 
 
 # ── Anthropic tool schema builder ─────────────────────────────────────────────

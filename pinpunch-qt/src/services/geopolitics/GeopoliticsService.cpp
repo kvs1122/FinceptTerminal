@@ -17,7 +17,9 @@
 
 namespace fincept::services::geo {
 
-static constexpr const char* kApiBase = "https://api.fincept.in/research/news-events";
+// Local-only mode: Geopolitics REST API disabled — all callers short-circuit
+// because the base URL is empty.
+static constexpr const char* kApiBase = "";
 
 namespace {
 inline void publish_to_hub(const QString& topic, const QVariant& value) {
@@ -51,6 +53,10 @@ void GeopoliticsService::run_python(const QString& script, const QStringList& ar
 void GeopoliticsService::fetch_events(const QString& country, const QString& city, const QString& category,
                                       int limit, int page, const QString& source,
                                       const QString& date_from, const QString& date_to) {
+    if (QString::fromLatin1(kApiBase).isEmpty()) {
+        emit error_occurred("events", "Geopolitics remote API disabled in local-only mode");
+        return;
+    }
     QUrl url(kApiBase);
     QUrlQuery q;
     if (!country.isEmpty())   q.addQueryItem("country", country);
@@ -192,6 +198,10 @@ void GeopoliticsService::fetch_unique_countries() {
         return;
     }
 
+    if (QString::fromLatin1(kApiBase).isEmpty()) {
+        emit countries_loaded({});
+        return;
+    }
     QPointer<GeopoliticsService> self = this;
     HttpClient::instance().get(
         QString(kApiBase) + "?get_unique_countries=true&limit=100", [self](Result<QJsonDocument> result) {
@@ -241,6 +251,10 @@ void GeopoliticsService::fetch_unique_categories() {
         return;
     }
 
+    if (QString::fromLatin1(kApiBase).isEmpty()) {
+        emit categories_loaded({});
+        return;
+    }
     QPointer<GeopoliticsService> self = this;
     HttpClient::instance().get(QString(kApiBase) + "?get_unique_categories=true", [self](Result<QJsonDocument> result) {
         if (!self)
@@ -276,6 +290,10 @@ void GeopoliticsService::fetch_unique_categories() {
 }
 
 void GeopoliticsService::fetch_unique_cities() {
+    if (QString::fromLatin1(kApiBase).isEmpty()) {
+        emit cities_loaded({});
+        return;
+    }
     QPointer<GeopoliticsService> self = this;
     HttpClient::instance().get(QString(kApiBase) + "?get_unique_cities=true", [self](Result<QJsonDocument> result) {
         if (!self)

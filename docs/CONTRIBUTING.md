@@ -259,8 +259,8 @@ Review process, scope gate, and close-on-sight list are in [`.github/CONTRIBUTIN
 |--------------|-------------------------------------------------------------------------------|
 | Issues       | [GitHub Issues](https://github.com/Fincept-Corporation/FinceptTerminal/issues) |
 | Discussions  | [GitHub Discussions](https://github.com/Fincept-Corporation/FinceptTerminal/discussions) |
-| Discord      | [discord.gg/ae87a8ygbN](https://discord.gg/ae87a8ygbN)                         |
-| Email        | support@fincept.in                                                             |
+| Discord      | [](https://)                         |
+| Email        |                                                              |
 
 Good first issues carry the `good-first-issue` label — those are the right starting point for new contributors.
 

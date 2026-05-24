@@ -230,7 +230,7 @@ void RegisterScreen::build_form_page() {
     nrl->addLayout(ln_col);
     vl->addWidget(name_row);
 
-    add_field(email_, "EMAIL", "user@domain.com", vl);
+    add_field(email_, "EMAIL", "Enter your email", vl);
 
     // Phone + country code side by side
     auto* ph_row = new QWidget(this);

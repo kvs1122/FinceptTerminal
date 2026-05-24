@@ -137,10 +137,6 @@ TermsScreen::TermsScreen(QWidget* parent) : QWidget(parent) {
     pvl->addWidget(body_text("We reserve the right to modify these terms at any time. Continued use of the Service "
                              "after changes constitutes acceptance of the modified terms."));
 
-    // Section 10
-    pvl->addWidget(section_heading("10", "CONTACT INFORMATION"));
-    pvl->addWidget(body_text("For questions about these Terms, contact us at support@fincept.in"));
-
     vl->addWidget(panel);
 
     // Footer navigation

@@ -7,7 +7,7 @@ AppConfig& AppConfig::instance() {
     return s;
 }
 
-AppConfig::AppConfig() : settings_("Fincept", "PinpunchTerminal") {}
+AppConfig::AppConfig() : settings_("Pinpunch", "PinpunchTerminal") {}
 
 QVariant AppConfig::get(const QString& key, const QVariant& default_val) const {
     return settings_.value(key, default_val);

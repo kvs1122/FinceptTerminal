@@ -85,7 +85,7 @@ Community leaders will take appropriate action for violations:
 
 ## Reporting
 
-**Report unacceptable behavior to:** support@fincept.in
+**Report unacceptable behavior to:** 
 
 Include:
 - Your contact information
@@ -103,7 +103,7 @@ Include:
 
 ## Appeals
 
-Appeal within 14 days by emailing support@fincept.in with:
+Appeal within 14 days by emailing  with:
 - Full details of the incident
 - Reason for appeal
 - Additional context or evidence
@@ -127,7 +127,7 @@ Adapted from [Contributor Covenant](https://www.contributor-covenant.org), versi
 
 ## Contact
 
-- **Email:** support@fincept.in
+- **Email:** 
 - **GitHub Issues:** https://github.com/Fincept-Corporation/FinceptTerminal/issues
 - **GitHub Discussions:** https://github.com/Fincept-Corporation/FinceptTerminal/discussions
 

@@ -122,13 +122,6 @@ TrademarksScreen::TrademarksScreen(QWidget* parent) : QWidget(parent) {
     pvl->addWidget(bullet("Geopolitical data from HDX and public sources"));
     pvl->addWidget(bullet("Crypto data from exchange APIs (Kraken, HyperLiquid, etc.)"));
 
-    pvl->addWidget(heading("6", "REPORTING INFRINGEMENT"));
-    pvl->addWidget(body("To report trademark infringement, contact: support@fincept.in"));
-
-    pvl->addWidget(heading("7", "LEGAL DEPARTMENT"));
-    pvl->addWidget(body("Fincept Corporation — Legal Department"));
-    pvl->addWidget(body("Email: support@fincept.in"));
-
     vl->addWidget(panel);
     vl->addStretch();
 

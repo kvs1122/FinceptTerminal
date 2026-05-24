@@ -200,7 +200,7 @@ static QVector<ConnectorConfig> market_configs() {
          true,
          true,
          {{"appKey", "App Key", FieldType::Password, "your-app-key", true, "", {}},
-          {"username", "Username", FieldType::Text, "user@company.com", true, "", {}},
+          {"username", "Username", FieldType::Text, "Username", true, "", {}},
           {"password", "Password", FieldType::Password, "", true, "", {}}}},
 
         {"marketstack",
@@ -284,7 +284,7 @@ static QVector<ConnectorConfig> market_configs() {
          true,
          true,
          {{"appKey", "App Key", FieldType::Password, "your-app-key", true, "", {}},
-          {"username", "RDP Username", FieldType::Text, "user@firm.com", false, "", {}},
+          {"username", "RDP Username", FieldType::Text, "Username", false, "", {}},
           {"password", "RDP Password", FieldType::Password, "", false, "", {}}}},
 
         {"pitchbook",

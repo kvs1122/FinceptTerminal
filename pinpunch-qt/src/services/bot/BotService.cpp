@@ -15,6 +15,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLoggingCategory>
+#include <QRegularExpression>
 #include <QTextStream>
 #include <QTimeZone>
 
@@ -188,6 +189,110 @@ QString BotService::today_news_jsonl_path() const {
         : QDateTime::currentDateTime();
     return BotConfig::instance().news_dir_path()
          + "/" + now.toString("yyyy-MM-dd") + ".jsonl";
+}
+
+QString BotService::lane_log_path() const {
+    // Bot rotates weekly (archive_claude_alpha_log.sh, Saturday 02:00 local).
+    // Within a trading week claude_alpha.log accumulates everything so a
+    // single tail position is correct for the whole week.
+    return BotConfig::instance().data_path() + "/claude_alpha.log";
+}
+
+// ── Lane-filter helpers ─────────────────────────────────────────────────────
+//
+// READ-ONLY tail of claude_alpha.log to learn each headline's lane assignment
+// (1 = IMMEDIATE, 2 = BATCH, 3 = DROP). The bot writes these lines as part of
+// its normal stdout logging — Pinpunch never modifies the file. Zero impact
+// on bot decision latency because the bot's classifier already ran and logged
+// the decision before we ever touch the file.
+
+QString BotService::normalize_headline_for_match(const QString& headline) {
+    QString s = headline;
+    // Common Benzinga HTML-entity escapes we see in the raw JSONL AND the log.
+    s.replace(QStringLiteral("&#39;"), QStringLiteral("'"));
+    s.replace(QStringLiteral("&quot;"), QStringLiteral("\""));
+    s.replace(QStringLiteral("&amp;"), QStringLiteral("&"));
+    s.replace(QStringLiteral("&lt;"), QStringLiteral("<"));
+    s.replace(QStringLiteral("&gt;"), QStringLiteral(">"));
+    s.replace(QStringLiteral("&nbsp;"), QStringLiteral(" "));
+    // Collapse whitespace runs to single spaces, lowercase, trim.
+    static const QRegularExpression ws(QStringLiteral("\\s+"));
+    s = s.replace(ws, QStringLiteral(" ")).trimmed().toLower();
+    if (s.size() > kHeadlineMatchPrefixLen)
+        s = s.left(kHeadlineMatchPrefixLen);
+    return s;
+}
+
+void BotService::ingest_lane_log() {
+    const QString path = lane_log_path();
+
+    // Detect rotation (path change or file shrink → reset state).
+    if (path != lane_log_path_cached_) {
+        lane_log_path_cached_ = path;
+        lane_log_pos_ = 0;
+        news_lane_by_key_.clear();
+    }
+
+    QFile f(path);
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // No log yet — totally normal on a fresh machine. Bot may not have
+        // started, or it may write logs elsewhere. Without log → no lane data
+        // → refresh_news() falls back to "show all" so the widget isn't empty.
+        return;
+    }
+    if (lane_log_pos_ > f.size()) {
+        // File truncated (archive script ran, or operator wiped it). Re-tail
+        // from start and rebuild the map.
+        lane_log_pos_ = 0;
+        news_lane_by_key_.clear();
+    }
+    f.seek(lane_log_pos_);
+
+    // Match: "📡 WS-Macro [LANE 1 IMMEDIATE] (reason): headline..."
+    //                    capture-1                    capture-2
+    // The reason group can contain parentheses (e.g. "tier-a-name-resolved:LULU(lululemon), queue=1/10")
+    // so we anchor on "] (" + first ")" before ": ".
+    static const QRegularExpression re(
+        QStringLiteral("WS-Macro \\[LANE ([123]) [A-Z]+\\] \\([^\\n]+?\\): (.+)$"));
+
+    int added = 0;
+    while (!f.atEnd()) {
+        const QByteArray raw = f.readLine();
+        if (raw.isEmpty())
+            break;
+        const QString line = QString::fromUtf8(raw);
+        auto m = re.match(line);
+        if (!m.hasMatch())
+            continue;
+        const int lane = m.captured(1).toInt();
+        const QString headline_in_log = m.captured(2).trimmed();
+        if (headline_in_log.isEmpty())
+            continue;
+        const QString key = normalize_headline_for_match(headline_in_log);
+        if (key.isEmpty())
+            continue;
+        news_lane_by_key_.insert(key, lane);
+        ++added;
+    }
+    lane_log_pos_ = f.pos();
+
+    // Cap the map — claude_alpha.log accumulates ~500 lane events/day, so
+    // 5000 covers ~10 days of unique headlines. Beyond that, clear half
+    // (oldest are unreachable anyway because tail position has moved).
+    if (news_lane_by_key_.size() > kLaneMapMaxEntries) {
+        bot_diag(QString("lane map at %1 entries — clearing for fresh window")
+                     .arg(news_lane_by_key_.size()));
+        news_lane_by_key_.clear();
+        // Tail position stays put — future lines re-populate. Items already
+        // in the JSONL buffer may temporarily show as "unknown lane" until
+        // the next ingest cycle re-reads from current pos forward, which is
+        // empty until new log lines arrive. Acceptable: this only triggers
+        // on multi-week-old data.
+    }
+
+    if (added > 0)
+        bot_diag(QString("ingest_lane_log: +%1 lane decisions (map size %2)")
+                     .arg(added).arg(news_lane_by_key_.size()));
 }
 
 // ─── Topic refreshers ─────────────────────────────────────────────────────
@@ -452,20 +557,46 @@ void BotService::refresh_news() {
     }
     hub.publish(QString::fromUtf8(topics::kNews), QVariant::fromValue(news_buffer_));
 
+    // ── Pull latest LANE classifications from claude_alpha.log ──────────
+    // READ-ONLY tail; the bot's classifier already ran. We just learn what
+    // it decided so we can drop Lane 3 noise before bridging to the widget.
+    ingest_lane_log();
+
     // ── Bridge to existing NewsWidget via `news:general` ────────────────
     // Map our BotNewsItem schema to Pinpunch's NewsArticle so the existing
     // dashboard widget (and anything else subscribed to news:general)
     // shows bot data with zero per-widget changes. RSS NewsService is
     // disabled in main.cpp so we're the sole publisher to this topic.
     //
+    // Lane filter: only emit Lane 1 (IMMEDIATE catalysts) + Lane 2 (BATCH
+    // name-resolved). Lane 3 (DROP / tier-a-no-ticker noise) is suppressed.
+    // Items the bot hasn't classified yet — or items that arrived before
+    // the log tailer caught up — are NOT shown, so the widget stays clean.
+    // Fallback: if the lane map is completely empty (claude_alpha.log not
+    // available, e.g. bot never started on this machine), show everything
+    // so the widget isn't blank — better to fall open than fall closed.
+    //
     // Iteration order matters: NewsWidget renders the QVector in array
     // order (top to bottom). We walk the buffer NEWEST→OLDEST so the
     // freshest item lands at the top of the widget. Buffer itself is
     // appended chronologically (oldest first) by the file-tail reader.
+    const bool lane_map_available = !news_lane_by_key_.isEmpty();
     QVector<fincept::services::NewsArticle> bridged;
     bridged.reserve(news_buffer_.size());
+    int dropped_l3 = 0;
+    int dropped_unknown = 0;
     for (auto it = news_buffer_.rbegin(); it != news_buffer_.rend(); ++it) {
         const BotNewsItem& n = *it;
+
+        // Apply lane filter unless the map is empty (fail-open mode).
+        if (lane_map_available) {
+            const QString key = normalize_headline_for_match(n.headline);
+            const int lane = news_lane_by_key_.value(key, 0); // 0 = unknown
+            if (lane == 3) { ++dropped_l3; continue; }
+            if (lane == 0) { ++dropped_unknown; continue; }
+            // lane 1 or 2 → fall through and emit
+        }
+
         fincept::services::NewsArticle a;
         a.id        = n.id;
         a.headline  = n.headline;
@@ -491,8 +622,13 @@ void BotService::refresh_news() {
         }
         bridged.append(a);
     }
-    bot_diag(QString("published %1 news items to news:general (buffer total %2)")
-                .arg(bridged.size()).arg(news_buffer_.size()));
+    bot_diag(QString("published %1 news items to news:general "
+                     "(buffer %2, lane-filter: dropped %3 L3 + %4 unknown, lane_map=%5)")
+                .arg(bridged.size())
+                .arg(news_buffer_.size())
+                .arg(dropped_l3)
+                .arg(dropped_unknown)
+                .arg(lane_map_available ? "ACTIVE" : "EMPTY-FALLOPEN"));
     hub.publish(QStringLiteral("news:general"), QVariant::fromValue(bridged));
 }
 

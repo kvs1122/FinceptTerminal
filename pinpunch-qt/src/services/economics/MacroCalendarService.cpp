@@ -14,7 +14,8 @@ namespace fincept::services {
 
 namespace {
 constexpr const char* kTopic = "econ:fincept:upcoming_events";
-constexpr const char* kUrl = "https://api.fincept.in/macro/upcoming-events?limit=25";
+// Local-only mode: macro events feed disabled. URL intentionally empty so refresh() exits.
+constexpr const char* kUrl = "";
 
 QJsonArray parse_events(const QJsonDocument& doc) {
     if (doc.isArray())
@@ -72,8 +73,17 @@ void MacroCalendarService::refresh(const QStringList& topics) {
     if (!topics.contains(QString::fromLatin1(kTopic)))
         return;
 
+    // Local-only mode: no remote macro feed. Publish empty array so consumers
+    // get a clean response instead of an error spinner.
+    const QString url = QString::fromLatin1(kUrl);
+    if (url.isEmpty()) {
+        fincept::datahub::DataHub::instance().publish(
+            QString::fromLatin1(kTopic), QVariant::fromValue(QJsonArray{}));
+        return;
+    }
+
     QPointer<MacroCalendarService> self = this;
-    fincept::HttpClient::instance().get(QString::fromLatin1(kUrl),
+    fincept::HttpClient::instance().get(url,
         [self](fincept::Result<QJsonDocument> result) {
             if (!self)
                 return;

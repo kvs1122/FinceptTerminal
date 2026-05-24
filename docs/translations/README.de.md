@@ -10,7 +10,7 @@
 
 Hochmoderne Financial-Intelligence-Plattform mit Finanzanalysen auf institutionellem Niveau, KI-Automatisierung und unbegrenzter Datenkonnektivität.
 
-[📥 Herunterladen](https://github.com/Fincept-Corporation/FinceptTerminal/releases)·[📚 Dokumente](https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs)·[💬 Diskussionen](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)·[💬 Zwietracht](https://discord.gg/ae87a8ygbN)·[🤝Partner](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
+[📥 Herunterladen](https://github.com/Fincept-Corporation/FinceptTerminal/releases)·[📚 Dokumente](https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs)·[💬 Diskussionen](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)·[🤝Partner](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 ![Fincept Terminal](https://raw.githubusercontent.com/Fincept-Corporation/FinceptTerminal/main/images/Dashboard.png)
 
@@ -165,7 +165,7 @@ Wir gestalten die Zukunft der Finanzanalyse – gemeinsam.
 -   Perfekt für Finanz-, Wirtschafts- und Datenwissenschaftskurse
 -   Integrierte Analytik für Aktien, Portfolio, Derivate, Anleihen und Wirtschaft
 
-**Interessiert?**E-Mail**[support@fincept.in](mailto:support@fincept.in)**mit dem Namen Ihrer Institution.
+**Interessiert?**E-Mail****mit dem Namen Ihrer Institution.
 
 [Details zur Universitätslizenzierung](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
@@ -184,7 +184,7 @@ Wir gestalten die Zukunft der Finanzanalyse – gemeinsam.
 ### Kommerzielle Lizenz
 
 -   Erforderlich für die geschäftliche Nutzung oder den kommerziellen Zugriff auf Fincept-Daten/APIs
--   Kontakt:**[support@fincept.in](mailto:support@fincept.in)**
+-   Kontakt:****
 -   Einzelheiten:[Leitfaden für kommerzielle Lizenzen](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 ### Marken
@@ -209,7 +209,7 @@ Wir gestalten die Zukunft der Finanzanalyse – gemeinsam.
 </a>
 </div>
 
-[![Email](https://img.shields.io/badge/Email-support@fincept.in-blue)](mailto:support@fincept.in)
+
 
 ⭐**Stern**· 🔄**Aktie**· 🤝**Beitragen**
 

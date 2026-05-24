@@ -30,9 +30,9 @@ Result<void> apply_v002(QSqlDatabase& db) {
     if (r.is_err())
         return r;
 
-    // Insert default Fincept LLM
-    sql(db, "INSERT OR IGNORE INTO llm_configs (provider, api_key, base_url, model, is_active) "
-            "VALUES ('fincept', '', 'https://api.fincept.in/research/llm', 'fincept-llm', 1)");
+    // Local-only mode: do NOT seed the Fincept managed LLM as the default
+    // provider. New installs start with no active provider; the user must
+    // configure one (Gemini, OpenAI, Cerebras, etc.) explicitly.
 
     // ── LLM Global Settings (singleton row) ──────────────────────────────────
     r = sql(db, "CREATE TABLE IF NOT EXISTS llm_global_settings ("

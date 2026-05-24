@@ -537,7 +537,7 @@ void AiChatBubble::on_send() {
     if (!ai_chat::LlmService::instance().is_configured()) {
         add_bubble("assistant",
                    "AI chat is not configured. Open **Settings → LLM Config** "
-                   "and add an API key or pick the Fincept provider.");
+                   "and paste a Cerebras (or other provider) API key.");
         return;
     }
 

@@ -10,7 +10,7 @@
 
 機関投資家グレードの財務分析、AI 自動化、無制限のデータ接続を備えた最先端の金融インテリジェンス プラットフォーム。
 
-[📥 ダウンロード](https://github.com/Fincept-Corporation/FinceptTerminal/releases)·[📚 ドキュメント](https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs)·[💬 ディスカッション](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)·[💬不協和音](https://discord.gg/ae87a8ygbN)·[🤝パートナー](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
+[📥 ダウンロード](https://github.com/Fincept-Corporation/FinceptTerminal/releases)·[📚 ドキュメント](https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs)·[💬 ディスカッション](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)·[🤝パートナー](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 ![Fincept Terminal](https://raw.githubusercontent.com/Fincept-Corporation/FinceptTerminal/main/images/Dashboard.png)
 
@@ -216,7 +216,7 @@ cmake --build build --config Release --parallel
 -   金融、経済、データ サイエンスのコースに最適
 -   株式・ポートフォリオ・デリバティブ・債券・経済学の分析を標準搭載
 
-**興味がある？**電子メール**[support@fincept.in](mailto:support@fincept.in)**あなたの機関名を付けてください。
+**興味がある？**電子メール****あなたの機関名を付けてください。
 
 [大学ライセンスの詳細](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
@@ -235,7 +235,7 @@ cmake --build build --config Release --parallel
 ### 商用ライセンス
 
 -   ビジネスで使用する場合、または商業的に Fincept データ/API にアクセスする場合に必要
--   接触：**[support@fincept.in](mailto:support@fincept.in)**
+-   接触：****
 -   詳細：[商用ライセンスガイド](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 ### 商標
@@ -260,7 +260,7 @@ cmake --build build --config Release --parallel
 </a>
 </div>
 
-[![Email](https://img.shields.io/badge/Email-support@fincept.in-blue)](mailto:support@fincept.in)
+
 
 ⭐**星**· 🔄**共有**· 🤝**貢献する**
 

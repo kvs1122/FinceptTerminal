@@ -101,12 +101,15 @@ void LlmService::ensure_config() const {
         }
     }
 
-    // Nothing configured — default to Fincept with the session key.
+    // Nothing configured — default to Cerebras (local-only mode disables the
+    // Fincept managed LLM, so we no longer auto-pick it). The user must still
+    // paste a Cerebras API key in Settings → LLM Configuration; until then
+    // is_configured() returns false and the UI shows a setup prompt.
     if (provider_.isEmpty()) {
-        provider_ = "fincept";
-        model_ = "MiniMax-M2.7";
+        provider_ = "cerebras";
+        model_ = "llama-3.3-70b";
         base_url_ = {};
-        LOG_INFO(kLlmSvcTag, "No LLM provider configured — using Fincept default");
+        LOG_INFO(kLlmSvcTag, "No LLM provider configured — defaulting to Cerebras (no key yet)");
     }
 
     // Fincept key always comes from the live AuthManager session; SettingsRepository fallback is the legacy path.
@@ -131,7 +134,7 @@ void LlmService::ensure_config() const {
     // Default system prompt — primes the model to actually use tools instead of declining tool-feasible requests.
     if (system_prompt_.trimmed().isEmpty()) {
         system_prompt_ =
-            "You are Fincept AI, the intelligent assistant embedded inside the Pinpunch Terminal — "
+            "You are Pinpunch AI, the intelligent assistant embedded inside the Pinpunch Terminal — "
             "a professional desktop financial intelligence application. You have access to tools that "
             "let you interact with the terminal directly: navigate screens, fetch live market data, "
             "manage watchlists, query portfolios, paper-trade, run Python analytics, search SEC Edgar "
@@ -159,7 +162,7 @@ void LlmService::ensure_config() const {
             "  - For charts, pass config={'chart_type':'bar'|'line'|'pie','title':...,'data':'1,2,3',"
             "    'labels':'Q1,Q2,Q3'}.\n"
             "  - Set proper metadata FIRST via report_set_metadata: title (e.g. 'Tesla Equity Research "
-            "    Report'), author (e.g. 'Fincept Research'), company, and date. Don't leave 'Analyst' "
+            "    Report'), author (e.g. 'Pinpunch Research'), company, and date. Don't leave 'Analyst' "
             "    or 'Untitled Report' defaults.\n"
             "  - Avoid one-line ramblings. Each text component should be a tight paragraph.\n"
             "• Python scripts: ONLY pass script names returned by list_python_scripts. Never invent or "
@@ -308,9 +311,10 @@ QString LlmService::get_endpoint_url() const {
     // Called with mutex_ held.
     const QString& p = provider_;
 
-    // Fincept sync chat endpoint (async lives in fincept_async_request).
+    // Local-only mode: Fincept managed LLM is disabled. Returning empty so the
+    // caller bails before constructing any network request.
     if (p == "fincept") {
-        return "https://api.fincept.in/research/chat";
+        return "";
     }
 
     // Custom base_url wins over hard-coded defaults.

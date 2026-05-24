@@ -21,7 +21,9 @@ namespace fincept::services {
 
 static constexpr const char* kQuantLibClientTag = "QuantLibClient";
 
-const QString QuantLibClient::API_BASE = QStringLiteral("https://api.fincept.in");
+// Local-only mode: API base intentionally empty so no QuantLib HTTP call ever
+// reaches a remote host. Calls short-circuit via the call() guard below.
+const QString QuantLibClient::API_BASE = QStringLiteral("");
 
 // Endpoints that use GET (no request body).
 static const QStringList GET_ENDPOINTS = {
@@ -135,6 +137,12 @@ mcp::ToolResult QuantLibClient::parse_response(int http_status, const QByteArray
 // ── Async call ───────────────────────────────────────────────────────────────
 
 void QuantLibClient::call(const QString& endpoint, const QJsonObject& body, QuantLibCallback callback) {
+    // Local-only mode: QuantLib remote API is disabled. Return a failure result
+    // immediately so no HTTP call is ever attempted.
+    if (API_BASE.isEmpty()) {
+        callback(mcp::ToolResult::fail("QuantLib remote API disabled in local-only mode"));
+        return;
+    }
     // Cache GET endpoints (static reference data) and query-param endpoints
     const bool cacheable = is_get_endpoint(endpoint) || is_query_param_endpoint(endpoint);
     if (cacheable) {

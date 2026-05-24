@@ -13,7 +13,9 @@
 
 namespace fincept::chat_mode {
 
-static constexpr const char* API_BASE = "https://api.fincept.in";
+// Local-only mode: ChatMode service is disabled; the CHAT button now opens
+// the local AiChatBubble (Gemini direct) instead of routing to api.fincept.in.
+static constexpr const char* API_BASE = "";
 
 // ── Singleton ─────────────────────────────────────────────────────────────────
 

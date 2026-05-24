@@ -3,19 +3,26 @@
 #include "core/logging/Logger.h"
 #include "network/http/HttpClient.h"
 #include "storage/cache/CacheManager.h"
+#include "storage/repositories/LlmConfigRepository.h"
 
 #    include "datahub/DataHub.h"
 #    include "datahub/DataHubMetaTypes.h"
 
 #include <QAtomicInt>
+#include <QCoreApplication>
 #include <QDateTime>
+#include <QEventLoop>
 #include <QJsonDocument>
 #include <QMutex>
 #include <QMutexLocker>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QPointer>
 #include <QRegularExpression>
 #include <QSet>
 #include <QUuid>
 #include <QXmlStreamReader>
+#include <QtConcurrent/QtConcurrent>
 
 #ifdef HAS_QT_WEBSOCKETS
 #    include <QtWebSockets/QWebSocket>
@@ -360,71 +367,292 @@ void NewsService::fetch_all_news_progressive(bool force, ArticlesCallback final_
     }
 }
 
-// ── AI Analysis via Fincept API ─────────────────────────────────────────────
+// ── AI Analysis via Cerebras (local-only path) ──────────────────────────────
+//
+// Previously POSTed to api.fincept.in/news/analyze. That endpoint scraped the
+// article URL server-side and returned a structured analysis. We've cut Fincept
+// entirely — Cerebras can't fetch URLs, so we look up the article locally in
+// the news cache and pass headline+summary+source+category as the prompt. The
+// model is asked to return strict JSON matching the NewsAnalysis struct shape.
+//
+// Provider: looks for a saved `cerebras` row in LlmConfigRepository. If the
+// user hasn't configured a Cerebras API key, fail loud — DON'T silently fall
+// back to any hosted endpoint.
 
-void NewsService::analyze_article(const QString& url, AnalysisCallback cb) {
-    QJsonObject body;
-    body["url"] = url;
+namespace {
 
-    // context = `this` ensures the callback drops if NewsService ever stops
-    // being a singleton — today it always outlives the request.
-    HttpClient::instance().post("/news/analyze", body, [this, cb](Result<QJsonDocument> result) {
-        if (result.is_err()) {
-            LOG_ERROR("NewsService", "Analysis failed: " + QString::fromStdString(result.error()));
-            cb(false, {});
-            return;
+struct CerebrasConfig {
+    QString api_key;
+    QString model;
+    QString base_url; // optional override (e.g. proxy); defaults to api.cerebras.ai
+};
+
+CerebrasConfig load_cerebras_config() {
+    CerebrasConfig out;
+    auto rows = fincept::LlmConfigRepository::instance().list_providers();
+    if (rows.is_ok()) {
+        for (const auto& r : rows.value()) {
+            if (r.provider.toLower() == "cerebras" && !r.api_key.isEmpty()) {
+                out.api_key  = r.api_key;
+                out.model    = r.model;
+                out.base_url = r.base_url;
+                break;
+            }
         }
-
-        auto obj = result.value().object();
-        if (!obj["success"].toBool(false)) {
-            LOG_ERROR("NewsService", "API returned failure: " + obj["message"].toString());
-            cb(false, {});
-            return;
-        }
-
-        auto data = obj["data"].toObject();
-        auto a = data["analysis"].toObject();
-        auto sent = a["sentiment"].toObject();
-        auto mi = a["market_impact"].toObject();
-        auto rs = a["risk_signals"].toObject();
-
-        NewsAnalysis analysis;
-        analysis.sentiment = {sent["score"].toDouble(), sent["intensity"].toDouble(), sent["confidence"].toDouble()};
-        analysis.market_impact = {mi["urgency"].toString(), mi["prediction"].toString()};
-        analysis.summary = a["summary"].toString();
-        analysis.credits_used = data["credits_used"].toInt();
-        analysis.credits_remaining = data["credits_remaining"].toInt();
-
-        for (const auto& v : a["keywords"].toArray())
-            analysis.keywords << v.toString();
-        for (const auto& v : a["topics"].toArray())
-            analysis.topics << v.toString();
-        for (const auto& v : a["key_points"].toArray())
-            analysis.key_points << v.toString();
-
-        auto reg = rs["regulatory"].toObject();
-        auto geo = rs["geopolitical"].toObject();
-        auto ops = rs["operational"].toObject();
-        auto mkt = rs["market"].toObject();
-        analysis.regulatory = {reg["level"].toString(), reg["details"].toString()};
-        analysis.geopolitical = {geo["level"].toString(), geo["details"].toString()};
-        analysis.operational = {ops["level"].toString(), ops["details"].toString()};
-        analysis.market = {mkt["level"].toString(), mkt["details"].toString()};
-
-        cb(true, analysis);
-        emit this->analysis_ready(analysis);
-    }, this);
+    }
+    if (out.model.isEmpty())
+        out.model = QStringLiteral("llama-3.3-70b"); // sensible default for analysis
+    return out;
 }
 
-// ── AI Headline Summarization ────────────────────────────────────────────────
+QString cerebras_endpoint(const CerebrasConfig& cfg) {
+    QString base = cfg.base_url.trimmed();
+    if (base.isEmpty())
+        return QStringLiteral("https://api.cerebras.ai/v1/chat/completions");
+    if (base.endsWith('/'))
+        base.chop(1);
+    return base + "/v1/chat/completions";
+}
+
+// Blocking POST to Cerebras chat-completions. Must run on a worker thread —
+// uses a local QNAM + QEventLoop, same pattern as MarketContextService::gemini_direct.
+struct CerebrasResult {
+    QString content;
+    QString error;
+};
+
+CerebrasResult cerebras_chat_blocking(const CerebrasConfig& cfg, const QString& system_prompt,
+                                       const QString& user_prompt, bool force_json) {
+    CerebrasResult r;
+
+    QJsonArray messages;
+    if (!system_prompt.isEmpty()) {
+        messages.append(QJsonObject{{"role", "system"}, {"content", system_prompt}});
+    }
+    messages.append(QJsonObject{{"role", "user"}, {"content", user_prompt}});
+
+    QJsonObject body;
+    body["model"]       = cfg.model;
+    body["messages"]    = messages;
+    body["temperature"] = 0.2;       // analysis: keep grounded
+    body["max_tokens"]  = 2048;
+    if (force_json) {
+        // OpenAI-compatible structured-output hint. Cerebras honours this on
+        // recent llama-3.3 / qwen models; older models ignore it harmlessly.
+        body["response_format"] = QJsonObject{{"type", "json_object"}};
+    }
+
+    QNetworkAccessManager local_nam;
+    QNetworkRequest req((QUrl(cerebras_endpoint(cfg))));
+    req.setRawHeader("Authorization", ("Bearer " + cfg.api_key).toUtf8());
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    req.setHeader(QNetworkRequest::UserAgentHeader, "Pinpunch/4.0 (NewsAnalysis)");
+    req.setAttribute(QNetworkRequest::Http2AllowedAttribute, true);
+
+    QNetworkReply* reply = local_nam.post(req, QJsonDocument(body).toJson(QJsonDocument::Compact));
+    QEventLoop loop;
+    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    QTimer::singleShot(60'000, &loop, &QEventLoop::quit);
+    loop.exec();
+
+    const int status         = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    const QByteArray bytes   = reply->readAll();
+    const auto err_kind      = reply->error();
+    const QString net_err    = reply->errorString();
+    reply->deleteLater();
+
+    if (err_kind != QNetworkReply::NoError && status == 0) {
+        r.error = QStringLiteral("network: %1").arg(net_err);
+        return r;
+    }
+    if (status >= 400) {
+        r.error = QStringLiteral("HTTP %1: %2").arg(status).arg(QString::fromUtf8(bytes.left(220)));
+        return r;
+    }
+
+    QJsonParseError pe;
+    const QJsonDocument doc = QJsonDocument::fromJson(bytes, &pe);
+    if (pe.error != QJsonParseError::NoError) {
+        r.error = QStringLiteral("parse: %1").arg(pe.errorString());
+        return r;
+    }
+    const QJsonObject rj    = doc.object();
+    const QJsonArray choices = rj.value("choices").toArray();
+    if (choices.isEmpty()) {
+        r.error = QStringLiteral("no choices in response");
+        return r;
+    }
+    const QString content = choices.first().toObject()
+                               .value("message").toObject()
+                               .value("content").toString();
+    if (content.trimmed().isEmpty()) {
+        r.error = QStringLiteral("empty content in first choice");
+        return r;
+    }
+    r.content = content;
+    return r;
+}
+
+// Find article in the cached news blob by URL.
+fincept::services::NewsArticle find_cached_article_by_url(const QString& url) {
+    fincept::services::NewsArticle out;
+    const QVariant cached = fincept::CacheManager::instance().get("news:articles");
+    if (cached.isNull())
+        return out;
+    const QJsonArray arr = QJsonDocument::fromJson(cached.toString().toUtf8()).array();
+    for (const auto& v : arr) {
+        const QJsonObject o = v.toObject();
+        if (o.value("link").toString() == url) {
+            out.id       = o["id"].toString();
+            out.headline = o["headline"].toString();
+            out.summary  = o["summary"].toString();
+            out.source   = o["source"].toString();
+            out.category = o["category"].toString();
+            out.region   = o["region"].toString();
+            out.link     = o["link"].toString();
+            for (const auto& t : o["tickers"].toArray())
+                out.tickers << t.toString();
+            break;
+        }
+    }
+    return out;
+}
+
+// Strip ```json fences or stray prose around a JSON object so QJsonDocument
+// parses cleanly. Cerebras usually returns clean JSON with response_format,
+// but older models occasionally wrap in code fences.
+QString strip_code_fences(QString s) {
+    s = s.trimmed();
+    if (s.startsWith("```")) {
+        const int first_nl = s.indexOf('\n');
+        if (first_nl > 0)
+            s = s.mid(first_nl + 1);
+        if (s.endsWith("```"))
+            s.chop(3);
+    }
+    // Find first { and last } in case the model added a preamble.
+    const int lb = s.indexOf('{');
+    const int rb = s.lastIndexOf('}');
+    if (lb >= 0 && rb > lb)
+        s = s.mid(lb, rb - lb + 1);
+    return s.trimmed();
+}
+
+} // anonymous namespace
+
+void NewsService::analyze_article(const QString& url, AnalysisCallback cb) {
+    // 1. Look up the article locally — Cerebras can't fetch URLs.
+    const NewsArticle article = find_cached_article_by_url(url);
+    if (article.headline.isEmpty()) {
+        LOG_WARN("NewsService", "analyze_article: URL not in news cache, can't analyze: " + url);
+        cb(false, {});
+        return;
+    }
+
+    // 2. Check Cerebras config.
+    const CerebrasConfig cfg = load_cerebras_config();
+    if (cfg.api_key.isEmpty()) {
+        LOG_WARN("NewsService",
+                 "analyze_article: no Cerebras API key configured (Settings → LLM Configuration → Cerebras)");
+        cb(false, {});
+        return;
+    }
+
+    // 3. Build prompt.
+    const QString sys =
+        "You are a financial news analyst. Given a single news headline + summary, return a "
+        "STRICT JSON OBJECT (no prose, no markdown) matching this shape:\n"
+        "{\n"
+        "  \"summary\": \"1-2 sentence analyst summary\",\n"
+        "  \"sentiment\": {\"score\": -1.0..1.0, \"intensity\": 0..1, \"confidence\": 0..1},\n"
+        "  \"market_impact\": {\"urgency\": \"LOW|MEDIUM|HIGH\", \"prediction\": \"negative|neutral|moderate_positive|positive\"},\n"
+        "  \"keywords\": [\"...\"],\n"
+        "  \"topics\": [\"...\"],\n"
+        "  \"key_points\": [\"...\"],\n"
+        "  \"risk_signals\": {\n"
+        "    \"regulatory\":   {\"level\": \"none|low|medium|high\", \"details\": \"...\"},\n"
+        "    \"geopolitical\": {\"level\": \"none|low|medium|high\", \"details\": \"...\"},\n"
+        "    \"operational\":  {\"level\": \"none|low|medium|high\", \"details\": \"...\"},\n"
+        "    \"market\":       {\"level\": \"none|low|medium|high\", \"details\": \"...\"}\n"
+        "  }\n"
+        "}\n"
+        "Be concise. Sentiment score is -1 very bearish, +1 very bullish. Empty arrays/strings "
+        "are fine when there's no signal. Return ONLY the JSON object.";
+
+    QString user;
+    user += "Headline: " + article.headline + "\n";
+    if (!article.summary.isEmpty())  user += "Summary: " + article.summary + "\n";
+    if (!article.source.isEmpty())   user += "Source: " + article.source + "\n";
+    if (!article.category.isEmpty()) user += "Category: " + article.category + "\n";
+    if (!article.tickers.isEmpty())  user += "Tickers: $" + article.tickers.join(" $") + "\n";
+
+    // 4. Run on worker thread, marshal back to main.
+    QPointer<NewsService> self = this;
+    (void)QtConcurrent::run([self, cfg, sys, user, cb]() {
+        const CerebrasResult cr = cerebras_chat_blocking(cfg, sys, user, /*force_json=*/true);
+
+        QMetaObject::invokeMethod(qApp, [self, cr, cb]() {
+            if (!self) return;
+            if (!cr.error.isEmpty()) {
+                LOG_ERROR("NewsService", "Cerebras analyze failed: " + cr.error.left(200));
+                cb(false, {});
+                return;
+            }
+
+            const QString json_str = strip_code_fences(cr.content);
+            QJsonParseError pe;
+            const QJsonDocument adoc = QJsonDocument::fromJson(json_str.toUtf8(), &pe);
+            if (pe.error != QJsonParseError::NoError || !adoc.isObject()) {
+                LOG_ERROR("NewsService",
+                          QString("Cerebras returned non-JSON content: %1; raw=%2")
+                              .arg(pe.errorString(), cr.content.left(160)));
+                cb(false, {});
+                return;
+            }
+
+            const QJsonObject a   = adoc.object();
+            const QJsonObject sent = a["sentiment"].toObject();
+            const QJsonObject mi   = a["market_impact"].toObject();
+            const QJsonObject rs   = a["risk_signals"].toObject();
+
+            NewsAnalysis analysis;
+            analysis.summary       = a["summary"].toString();
+            analysis.sentiment     = {sent["score"].toDouble(),
+                                      sent["intensity"].toDouble(),
+                                      sent["confidence"].toDouble()};
+            analysis.market_impact = {mi["urgency"].toString(), mi["prediction"].toString()};
+            // Local-only mode: credits are meaningless. Leave at 0.
+            analysis.credits_used      = 0;
+            analysis.credits_remaining = 0;
+
+            for (const auto& v : a["keywords"].toArray())   analysis.keywords   << v.toString();
+            for (const auto& v : a["topics"].toArray())     analysis.topics     << v.toString();
+            for (const auto& v : a["key_points"].toArray()) analysis.key_points << v.toString();
+
+            const auto reg = rs["regulatory"].toObject();
+            const auto geo = rs["geopolitical"].toObject();
+            const auto ops = rs["operational"].toObject();
+            const auto mkt = rs["market"].toObject();
+            analysis.regulatory   = {reg["level"].toString(), reg["details"].toString()};
+            analysis.geopolitical = {geo["level"].toString(), geo["details"].toString()};
+            analysis.operational  = {ops["level"].toString(), ops["details"].toString()};
+            analysis.market       = {mkt["level"].toString(), mkt["details"].toString()};
+
+            cb(true, analysis);
+            emit self->analysis_ready(analysis);
+        }, Qt::QueuedConnection);
+    });
+}
+
+// ── AI Headline Summarization via Cerebras ──────────────────────────────────
 
 void NewsService::summarize_headlines(const QVector<NewsArticle>& articles, int count, SummaryCallback cb) {
-    // Build headline signature for cache check
+    // Build headline signature for cache check.
     QStringList headlines;
     for (int i = 0; i < std::min(count, static_cast<int>(articles.size())); ++i)
         headlines.append(articles[i].headline);
     std::sort(headlines.begin(), headlines.end());
-    QString sig = headlines.join("|").left(500);
+    const QString sig = headlines.join("|").left(500);
 
     {
         const QString sum_key = "news:summary:" + sig.left(200);
@@ -435,33 +663,43 @@ void NewsService::summarize_headlines(const QVector<NewsArticle>& articles, int 
         }
     }
 
-    // Build request body
-    QJsonArray headline_array;
+    const CerebrasConfig cfg = load_cerebras_config();
+    if (cfg.api_key.isEmpty()) {
+        LOG_WARN("NewsService",
+                 "summarize_headlines: no Cerebras API key configured (Settings → LLM Configuration → Cerebras)");
+        cb(false, {});
+        return;
+    }
+
+    const QString sys =
+        "You are a markets editor. Given a list of news headlines, write a TIGHT 2-3 sentence "
+        "digest highlighting the dominant themes, any breaking risk, and the overall market tone. "
+        "No bullet points, no preamble — just the prose digest.";
+
+    QString user = QStringLiteral("Top %1 headlines:\n").arg(headlines.size());
     for (const auto& h : headlines)
-        headline_array.append(h);
+        user += "- " + h + "\n";
 
-    QJsonObject body;
-    body["headlines"] = headline_array;
-    body["count"] = count;
+    QPointer<NewsService> self = this;
+    (void)QtConcurrent::run([self, cfg, sys, user, sig, cb]() {
+        const CerebrasResult cr = cerebras_chat_blocking(cfg, sys, user, /*force_json=*/false);
 
-    HttpClient::instance().post("/news/summarize", body, [cb, sig](Result<QJsonDocument> result) {
-        if (result.is_err()) {
-            LOG_WARN("NewsService", "Summarization failed: " + QString::fromStdString(result.error()));
-            cb(false, {});
-            return;
-        }
-
-        auto obj = result.value().object();
-        QString summary = obj["summary"].toString();
-        if (summary.isEmpty() && obj.contains("data"))
-            summary = obj["data"].toObject()["summary"].toString();
-
-        if (!summary.isEmpty()) {
-            fincept::CacheManager::instance().put("news:summary:" + sig.left(200), QVariant(summary),
-                                                  kSummaryCacheTtlSec, "news");
-        }
-
-        cb(!summary.isEmpty(), summary);
+        QMetaObject::invokeMethod(qApp, [self, cr, sig, cb]() {
+            if (!self) return;
+            if (!cr.error.isEmpty()) {
+                LOG_WARN("NewsService", "Cerebras summarize failed: " + cr.error.left(200));
+                cb(false, {});
+                return;
+            }
+            const QString summary = cr.content.trimmed();
+            if (summary.isEmpty()) {
+                cb(false, {});
+                return;
+            }
+            fincept::CacheManager::instance().put(
+                "news:summary:" + sig.left(200), QVariant(summary), kSummaryCacheTtlSec, "news");
+            cb(true, summary);
+        }, Qt::QueuedConnection);
     });
 }
 
@@ -559,8 +797,15 @@ void NewsService::connect_live_feed(const QString& ws_url) {
         LOG_INFO("NewsService", "Live article: " + article.headline.left(50));
     });
 
-    QString url = ws_url.isEmpty() ? "wss://api.fincept.in/ws/news" : ws_url;
-    live_ws_->open(QUrl(url));
+    // Local-only mode: no default remote WebSocket. If the caller did not pass
+    // their own ws_url, don't open any connection.
+    if (ws_url.isEmpty()) {
+        LOG_INFO("NewsService", "Live feed disabled (local-only mode, no ws_url configured)");
+        live_ws_->deleteLater();
+        live_ws_ = nullptr;
+        return;
+    }
+    live_ws_->open(QUrl(ws_url));
 }
 
 void NewsService::disconnect_live_feed() {

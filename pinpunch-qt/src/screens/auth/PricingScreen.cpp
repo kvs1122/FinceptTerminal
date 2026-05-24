@@ -483,9 +483,14 @@ void PricingScreen::on_select_plan(const QString& plan_id) {
             return;
         }
 
-        QString url = QString("https://fincept.in/checkout?token=%1&plan=%2")
-                          .arg(QUrl::toPercentEncoding(token), QUrl::toPercentEncoding(plan_id));
-        QDesktopServices::openUrl(QUrl(url));
+        // Local-only mode: hosted checkout is disabled. PricingScreen is dead
+        // UI in this fork; if it is ever reached, do nothing instead of opening
+        // a remote checkout URL.
+        Q_UNUSED(token);
+        Q_UNUSED(plan_id);
+        error_label_->setText("Checkout is disabled in local-only mode.");
+        error_label_->show();
+        return;
 
         // Store plan before payment so we can detect changes
         awaiting_payment_ = true;

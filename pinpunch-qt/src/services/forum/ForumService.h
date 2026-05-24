@@ -63,7 +63,10 @@ class ForumService : public QObject {
     static ForumProfile parse_profile(const QJsonObject& o);
 
     QNetworkAccessManager* nam_ = nullptr;
-    static constexpr const char* BASE = "https://api.fincept.in";
+    // Local-only mode: Forum REST is disabled. Empty base URL causes any
+    // request builder concatenating BASE to produce a relative URL which
+    // QNetworkAccessManager rejects, so nothing leaves the box.
+    static constexpr const char* BASE = "";
 };
 
 } // namespace fincept::services

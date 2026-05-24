@@ -101,8 +101,7 @@ from .config import (
 )
 
 __version__ = "1.0.0"
-__author__ = "Fincept Corporation"
-__email__ = "dev@fincept.com"
+__author__ = "Pinpunch Terminal"
 
 # Module metadata
 __all__ = [

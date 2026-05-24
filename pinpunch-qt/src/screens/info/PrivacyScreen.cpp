@@ -178,11 +178,6 @@ PrivacyScreen::PrivacyScreen(QWidget* parent) : QWidget(parent) {
     pvl->addWidget(bullet("Portability — Export your data in a machine-readable format"));
     pvl->addWidget(bullet("Opt-out — Unsubscribe from marketing communications"));
 
-    // 7 — Contact
-    pvl->addWidget(section_heading("@", "CONTACT US"));
-    pvl->addWidget(body_text("Privacy Officer: support@fincept.in"));
-    pvl->addWidget(body_text("For privacy-related inquiries, write to the address above."));
-
     vl->addWidget(panel);
 
     // Footer navigation

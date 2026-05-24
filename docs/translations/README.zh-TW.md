@@ -10,7 +10,7 @@
 
 最先進的金融情報平台，具備 CFA 級別分析、人工智慧自動化，以及無限的數據連接能力。
 
-[📥 下載](https://github.com/Fincept-Corporation/FinceptTerminal/releases)·[📚 官方文件](https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs)·[💬 討論區](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)·[💬 Discord](https://discord.gg/ae87a8ygbN)·[🤝 合作夥伴](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
+[📥 下載](https://github.com/Fincept-Corporation/FinceptTerminal/releases)·[📚 官方文件](https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs)·[💬 討論區](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)·[🤝 合作夥伴](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 ![Fincept Terminal](https://raw.githubusercontent.com/Fincept-Corporation/FinceptTerminal/main/images/Dashboard.png)
 
@@ -234,7 +234,7 @@ cmake --build build --config Release --parallel
 -   內建 CFA 課程分析
 
  
-**有興趣嗎？**  請附上您的機構名稱，發送電子郵件至 support@fincept.in。
+**有興趣嗎？**  請附上您的機構名稱，發送電子郵件至 。
 [大學授權詳細資訊](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 * * *
@@ -252,7 +252,7 @@ cmake --build build --config Release --parallel
 ### 商業授權
 
 -   若用於商業用途或需要商業級存取 Fincept 數據/API 時必備
--   聯絡方式：**[support@fincept.in](mailto:support@fincept.in)**
+-   聯絡方式：****
 -   詳細資訊：[商業授權指南](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 ### 商標聲明
@@ -277,7 +277,7 @@ cmake --build build --config Release --parallel
 </a>
 </div>
 
-[![Email](https://img.shields.io/badge/Email-support@fincept.in-blue)](mailto:support@fincept.in)
+
 
 ⭐ Star 支持 · 🔄 Fork 分享 · 🤝 參與貢獻
 

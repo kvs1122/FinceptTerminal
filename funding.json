@@ -5,7 +5,7 @@
     "type": "organisation",
     "role": "owner",
     "name": "Fincept Corporation",
-    "email": "support@fincept.in",
+    "email": "",
     "description": "Fincept Corporation develops the Fincept Terminal, a state-of-the-art open-source financial intelligence platform with institutional-grade financial analytics, AI automation, and unlimited data connectivity. We build professional-grade financial tools that compete on analytics depth and data accessibility.",
     "webpageUrl": {
       "url": "https://github.com/Fincept-Corporation/FinceptTerminal"

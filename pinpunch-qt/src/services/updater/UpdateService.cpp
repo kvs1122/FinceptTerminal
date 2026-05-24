@@ -104,6 +104,15 @@ bool UpdateService::is_newer(const QString& local, const QString& remote) {
 // ── Public entry point ──────────────────────────────────────────────────────
 
 void UpdateService::check_for_updates(bool silent) {
+    // Local-only mode: auto-update check disabled. Hitting a manifest URL on
+    // every launch is a phone-home signal (even GitHub raw counts) — skip
+    // entirely. Users can manually pull from the repo if they want a new build.
+    Q_UNUSED(silent);
+    LOG_INFO("UpdateService", "Auto-update check disabled (local-only mode)");
+    emit check_finished(false);
+    return;
+
+#if 0  // Dead code retained for reference only.
     if (in_progress_) {
         LOG_INFO("UpdateService", "Check already in progress — ignoring duplicate call");
         return;
@@ -156,6 +165,7 @@ void UpdateService::check_for_updates(bool silent) {
                   QString("PinpunchTerminal/%1 (%2)").arg(local_version, platform_key));
     QNetworkReply* reply = net_.get(req);
     connect(reply, &QNetworkReply::finished, this, &UpdateService::on_manifest_reply_finished);
+#endif  // Dead-code guard for auto-update (local-only mode)
 }
 
 // ── Manifest response ───────────────────────────────────────────────────────

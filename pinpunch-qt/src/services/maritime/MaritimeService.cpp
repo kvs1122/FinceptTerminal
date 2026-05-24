@@ -21,7 +21,14 @@ inline void publish_to_hub(const QString& topic, const QVariant& value) {
 }
 }  // namespace
 
-static constexpr const char* kMarineBase = "https://api.fincept.in/marine";
+// Local-only mode: maritime remote API disabled. All public entrypoints
+// short-circuit when the base URL is empty so no HTTP call is attempted.
+static constexpr const char* kMarineBase = "";
+
+namespace {
+inline bool maritime_disabled() { return QString::fromLatin1(kMarineBase).isEmpty(); }
+}  // namespace
+
 static constexpr int kVesselTtlSec = 60;      // position data: 1 min
 static constexpr int kHistoryTtlSec = 5 * 60; // history: 5 min
 
@@ -70,6 +77,7 @@ static QJsonObject unwrap(const QJsonObject& root) {
 //           credits_used:N, remaining_credits:N}}
 
 void MaritimeService::search_vessels_by_area(const AreaSearchParams& params) {
+    if (maritime_disabled()) { emit vessels_loaded({}); return; }
     QJsonObject body;
     body["min_lat"] = params.min_lat;
     body["max_lat"] = params.max_lat;
@@ -173,6 +181,7 @@ void MaritimeService::search_vessels_by_area(const AreaSearchParams& params) {
 void MaritimeService::get_vessel_position(const QString& imo) {
     if (imo.trimmed().isEmpty())
         return;
+    if (maritime_disabled()) { emit error_occurred("vessel_position", "Maritime API disabled in local-only mode"); return; }
 
     const QString cache_key = "maritime:vessel:" + imo.trimmed();
     const QVariant cached = fincept::CacheManager::instance().get(cache_key);
@@ -212,6 +221,7 @@ void MaritimeService::get_vessel_position(const QString& imo) {
 
 // ── Multi vessel positions ───────────────────────────────────────────────────
 void MaritimeService::get_multi_vessel_positions(const QStringList& imos) {
+    if (maritime_disabled()) { emit vessels_loaded({}); return; }
     QStringList sorted = imos;
     std::sort(sorted.begin(), sorted.end());
     const QString cache_key = "maritime:multi:" + sorted.join(",");
@@ -310,6 +320,7 @@ void MaritimeService::get_multi_vessel_positions(const QStringList& imos) {
 
 // ── Vessel history ───────────────────────────────────────────────────────────
 void MaritimeService::get_vessel_history(const QString& imo) {
+    if (maritime_disabled()) { emit error_occurred("vessel_history", "Maritime API disabled in local-only mode"); return; }
     const QString imo_trimmed = imo.trimmed();
     const QString cache_key = "maritime:history:" + imo_trimmed;
     const QVariant cached = fincept::CacheManager::instance().get(cache_key);
@@ -403,6 +414,7 @@ void MaritimeService::get_vessel_history(const QString& imo) {
 
 // ── Health check ─────────────────────────────────────────────────────────────
 void MaritimeService::check_health() {
+    if (maritime_disabled()) { emit error_occurred("health", "Maritime API disabled in local-only mode"); return; }
     QPointer<MaritimeService> self = this;
     HttpClient::instance().get(QString(kMarineBase) + "/health", [self](Result<QJsonDocument> result) {
         if (!self)

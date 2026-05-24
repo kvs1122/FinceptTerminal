@@ -294,9 +294,9 @@ No external package manager required — Qt6 provides all core dependencies.
 
 ## Contact
 
-- **Email:** support@fincept.in
+- **Email:** 
 - **GitHub Issues:** https://github.com/Fincept-Corporation/FinceptTerminal/issues
-- **Discord:** https://discord.gg/ae87a8ygbN
+- **Discord:** https://
 
 ---
 

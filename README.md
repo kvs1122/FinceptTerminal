@@ -22,7 +22,7 @@
 
 State-of-the-art financial intelligence platform with institutional-grade financial analytics, AI automation, and unlimited data connectivity.
 
-[📥 Download](https://github.com/Fincept-Corporation/FinceptTerminal/releases) · [⚖️ License](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md) · [💬 Discussions](https://github.com/Fincept-Corporation/FinceptTerminal/discussions) · [💬 Discord](https://discord.gg/ae87a8ygbN) · [🤝 Partner](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
+[📥 Download](https://github.com/Fincept-Corporation/FinceptTerminal/releases) · [⚖️ License](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md) · [💬 Discussions](https://github.com/Fincept-Corporation/FinceptTerminal/discussions) ·  · [🤝 Partner](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 ![Fincept Terminal](https://raw.githubusercontent.com/Fincept-Corporation/FinceptTerminal/main/images/FinceptBanner.png)
 
@@ -272,7 +272,7 @@ We're thinking long-term — and we hope you are too. That said, please only par
 - Perfect for finance, economics, and data science courses
 - Equity, portfolio, derivatives, fixed income, and economics analytics built-in
 
-**Interested?** Email **support@fincept.in** with your institution name.
+**Interested?** Email **** with your institution name.
 
 [University Licensing Details](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
@@ -296,7 +296,7 @@ The license attaches to the **codebase and any Derivative Work of it**, not to s
 
 **Enforcement & Penalties.** Fincept Corporation actively monitors public repositories, app stores, cloud marketplaces, and SaaS platforms for unlicensed Commercial Use, and pursues DMCA takedowns, cease-and-desist notices, and civil action under Indian and international law. Unauthorized commercial use is subject to **liquidated damages starting at USD 50,000 per organization per year**, with higher amounts for unauthorized SaaS distribution, fork-and-replace deployments, and trademark misuse — in addition to backdated license fees, disgorgement of profits, and recovery of legal costs. **Joint and several liability** applies: any company that engages a third-party developer, integrator, or consultancy to build, modify, or deploy the Software is fully liable alongside that developer for any unauthorized use. Governing law: India · Exclusive jurisdiction: Delhi, India.
 
-**Contact for licensing:** support@fincept.in · Full terms: [docs/COMMERCIAL_LICENSE.md](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
+**Contact for licensing:**  · Full terms: [docs/COMMERCIAL_LICENSE.md](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 © 2025–2026 Fincept Corporation. All rights reserved.
 
@@ -318,7 +318,7 @@ The license attaches to the **codebase and any Derivative Work of it**, not to s
 
 [![Repobeats](https://repobeats.axiom.co/api/embed/fincept-corporation-finceptterminal.svg "Repobeats analytics image")](https://repobeats.axiom.co)
 
-[![Email](https://img.shields.io/badge/Email-support@fincept.in-blue)](mailto:support@fincept.in)
+
 
 ⭐ **Star** · 🔄 **Share** · 🤝 **Contribute**
 

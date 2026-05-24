@@ -10,7 +10,7 @@
 
 सीएफए-स्तरीय एनालिटिक्स, एआई ऑटोमेशन और असीमित डेटा कनेक्टिविटी के साथ अत्याधुनिक वित्तीय खुफिया मंच।
 
-[📥 Download](https://github.com/Fincept-Corporation/FinceptTerminal/releases)·[📚 दस्तावेज़](https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs)·[💬चर्चाएँ](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)·[💬 कलह](https://discord.gg/ae87a8ygbN)·[🤝साथी](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
+[📥 Download](https://github.com/Fincept-Corporation/FinceptTerminal/releases)·[📚 दस्तावेज़](https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs)·[💬चर्चाएँ](https://github.com/Fincept-Corporation/FinceptTerminal/discussions)·[🤝साथी](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 ![Fincept Terminal](https://raw.githubusercontent.com/Fincept-Corporation/FinceptTerminal/main/images/Dashboard.png)
 
@@ -231,7 +231,7 @@ cmake --build build --config Release --parallel
 -   वित्त, अर्थशास्त्र और डेटा विज्ञान पाठ्यक्रमों के लिए बिल्कुल सही
 -   सीएफए पाठ्यक्रम विश्लेषण अंतर्निहित
 
-**इच्छुक?**ईमेल**[support@fincept.in](mailto:support@fincept.in)**आपके संस्थान के नाम के साथ.
+**इच्छुक?**ईमेल****आपके संस्थान के नाम के साथ.
 
 [विश्वविद्यालय लाइसेंसिंग विवरण](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
@@ -250,7 +250,7 @@ cmake --build build --config Release --parallel
 ### वाणिज्यिक लाइसेंस
 
 -   व्यावसायिक उपयोग के लिए या व्यावसायिक रूप से फिनसेप्ट डेटा/एपीआई तक पहुंचने के लिए आवश्यक है
--   संपर्क करना:**[support@fincept.in](mailto:support@fincept.in)**
+-   संपर्क करना:****
 -   विवरण:[वाणिज्यिक लाइसेंस गाइड](https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/COMMERCIAL_LICENSE.md)
 
 ### ट्रेडमार्क
@@ -275,7 +275,7 @@ cmake --build build --config Release --parallel
 </a>
 </div>
 
-[![Email](https://img.shields.io/badge/Email-support@fincept.in-blue)](mailto:support@fincept.in)
+
 
 ⭐**तारा**· 🔄**शेयर करना**· 🤝**योगदान देना**
 

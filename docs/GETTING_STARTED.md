@@ -315,8 +315,8 @@ sudo apt install libgl1-mesa-dev libglu1-mesa-dev
 |---------|------|
 | GitHub Issues | https://github.com/Fincept-Corporation/FinceptTerminal/issues |
 | GitHub Discussions | https://github.com/Fincept-Corporation/FinceptTerminal/discussions |
-| Discord | https://discord.gg/ae87a8ygbN |
-| Email | support@fincept.in |
+| Discord | https:// |
+| Email |  |
 
 ---
 

@@ -59,7 +59,7 @@ jobs:
 
       - name: Move translations and clean up root
         run: |
-          git config --local user.email "action@github.com"
+          git config --local user.email "venkat.k0822@gmail.com"
           git config --local user.name "GitHub Action"
 
           # Pull any commits the action made to root despite COMMIT: false

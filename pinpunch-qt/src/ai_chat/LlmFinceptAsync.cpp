@@ -40,7 +40,10 @@ namespace { constexpr const char* kLlmFinceptTag = "LlmService"; }
 //     deliberate discovery.
 //   • Tool RAG OFF or explicit filter: legacy behaviour — list up to 60
 //     filtered tools inline.
-static QString build_tool_catalog_for_prompt(const mcp::ToolFilter& filter) {
+// [[maybe_unused]] — only referenced inside the `#if 0` dead-code block in
+// fincept_async_request below (kept for reference; never compiled). Without
+// the attribute, -Wunused-function fires.
+[[maybe_unused]] static QString build_tool_catalog_for_prompt(const mcp::ToolFilter& filter) {
     auto all_tools = mcp::McpService::instance().get_all_tools(filter);
     if (all_tools.empty())
         return {};
@@ -111,12 +114,20 @@ LlmResponse LlmService::fincept_async_request(const QString& user_message,
                                               const std::vector<ConversationMessage>& history) {
     LlmResponse resp;
 
+    // Local-only mode: Fincept async LLM is disabled. Short-circuit before
+    // building the prompt — nothing leaves the box.
+    Q_UNUSED(user_message);
+    Q_UNUSED(history);
+    resp.error = "Fincept managed LLM disabled in local-only mode";
+    LOG_INFO(kLlmFinceptTag, resp.error);
+    return resp;
+
+#if 0  // Dead code retained for reference only; never compiled or executed.
     // Build prompt string for the async endpoint (it takes a plain prompt, not messages)
     QString prompt;
     if (!system_prompt_.isEmpty())
         prompt += system_prompt_ + "\n\n";
 
-    // Inject tool catalog so the model can emit text-based tool calls
     if (detail::effective_tools_enabled(tools_enabled_)) {
         QString tool_catalog = build_tool_catalog_for_prompt(detail::apply_request_policy(tool_filter_));
         if (!tool_catalog.isEmpty())
@@ -134,11 +145,10 @@ LlmResponse LlmService::fincept_async_request(const QString& user_message,
     QJsonObject submit_body;
     submit_body["prompt"]     = prompt;
     submit_body["max_tokens"] = resolved_max_tokens();
-    // Temperature intentionally omitted — Fincept backend uses its own default.
 
     auto hdr = get_headers();
-    const QString async_url   = "https://api.fincept.in/research/llm/async";
-    const QString status_base = "https://api.fincept.in/research/llm/status/";
+    const QString async_url   = "";
+    const QString status_base = "";
 
     LOG_INFO(kLlmFinceptTag, QString("Fincept async: submitting to %1 (api_key=%2, prompt_len=%3)")
                       .arg(async_url)
@@ -242,6 +252,7 @@ LlmResponse LlmService::fincept_async_request(const QString& user_message,
 
     resp.error = "Fincept async timed out waiting for response";
     return resp;
+#endif  // Dead-code guard for Fincept async LLM (local-only mode)
 }
 
 } // namespace fincept::ai_chat

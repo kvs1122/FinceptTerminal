@@ -3,9 +3,12 @@
 #include "datahub/DataHub.h"
 #include "ui/theme/Theme.h"
 
+#include <QDate>
+#include <QDateTime>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QJsonObject>
+#include <QTimeZone>
 
 namespace {
 constexpr const char* kTopic = "econ:fincept:upcoming_events";
@@ -173,6 +176,21 @@ void EconomicCalendarWidget::populate(const QJsonArray& events) {
 
     clear_list();
 
+    // ── Reference dates for the "tomorrow's releases" highlight ──────────
+    // Use ET because BotEconCalendarService now publishes dates in ET — and
+    // ET is the operator's market-relevant day boundary. A west-coast user
+    // at 22:30 PT (= 01:30 ET next day) wants the calendar to ALREADY say
+    // "tomorrow is the day after the new ET date", because the trading day
+    // has already turned over.
+    QDate today_et;
+    {
+        QTimeZone et("America/New_York");
+        today_et = et.isValid()
+            ? QDateTime::currentDateTimeUtc().toTimeZone(et).date()
+            : QDate::currentDate();
+    }
+    const QDate tomorrow_et = today_et.addDays(1);
+
     bool alt = false;
     int count = 0;
 
@@ -193,20 +211,36 @@ void EconomicCalendarWidget::populate(const QJsonArray& events) {
         QString forecast = e["forecast"].toString().trimmed();
         int imp_int = e["importance"].toInt(0);
 
-        // Date: show as MMM-DD
+        // Parse event date so we can compare against tomorrow_et for the
+        // "you have catalysts overnight" highlight.
+        const QDate event_date = (date.length() == 10)
+            ? QDate::fromString(date, Qt::ISODate)
+            : QDate();
+        const bool is_tomorrow = event_date.isValid() && event_date == tomorrow_et;
+        const bool is_today    = event_date.isValid() && event_date == today_et;
+
+        // Date display: "Thu May-28 08:30 ET" — weekday prefix added so the
+        // operator can scan "is Friday a big day?" at a glance without
+        // mentally translating dates. Format: ddd MMM-DD HH:MM ET.
+        // ET suffix makes the timezone explicit. Producer already emits
+        // ET-localised time/date so no further conversion needed here.
         QString date_display = date;
-        if (date.length() == 10) { // YYYY-MM-DD
-            QStringList parts = date.split('-');
-            if (parts.size() == 3) {
-                static const char* months[] = {"",    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-                int m = parts[1].toInt();
-                if (m >= 1 && m <= 12)
-                    date_display = QString("%1-%2").arg(months[m]).arg(parts[2]);
-            }
+        if (event_date.isValid()) {
+            static const char* months[] = {"",    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+            // Qt's "ddd" format string is the short locale-aware day name
+            // (Mon/Tue/Wed/Thu/Fri/Sat/Sun in English). Using the QDate
+            // method keeps us locale-correct if the operator's machine is
+            // configured for a non-English locale.
+            const QString dow = event_date.toString("ddd");
+            const int m = event_date.month();
+            const int d = event_date.day();
+            date_display = (m >= 1 && m <= 12)
+                ? QString("%1 %2-%3").arg(dow, months[m]).arg(d, 2, 10, QChar('0'))
+                : QString("%1 %2").arg(dow, date);
         }
         if (!time_str.isEmpty())
-            date_display += " " + time_str.left(5);
+            date_display += " " + time_str.left(5) + " ET";
 
         // Importance color: 0=dim, 1=low/dim, 2=medium/amber, 3=high/red
         QString imp_color = imp_int >= 3   ? ui::colors::NEGATIVE()
@@ -214,19 +248,49 @@ void EconomicCalendarWidget::populate(const QJsonArray& events) {
                                            : ui::colors::TEXT_TERTIARY();
         QString imp_text = imp_int >= 3 ? "HIGH" : imp_int == 2 ? "MED" : imp_int == 1 ? "LOW" : "--";
 
+        // Row background: tomorrow's rows get a warm AMBER wash + left
+        // border so they're impossible to miss on a quick glance — this is
+        // the "decide whether to carry overnight" cue. Today's rows get a
+        // subtler treatment (faint amber border, no fill) so a release
+        // about to land is also flagged. Everything else uses the normal
+        // alternating-row style.
+        QString row_style;
+        if (is_tomorrow) {
+            // Warning amber tint — distinctive without being alarm-red.
+            // BORDER_LEFT 3px solid amber acts as a vertical attention bar.
+            row_style = QString("background: %1; border-left: 3px solid %2;")
+                            .arg(ui::colors::AMBER_DIM(), ui::colors::AMBER());
+        } else if (is_today) {
+            row_style = QString("background: %1; border-left: 3px solid %2;")
+                            .arg(alt ? ui::colors::BG_RAISED() : "transparent",
+                                 ui::colors::WARNING());
+        } else {
+            row_style = QString("background: %1; border-left: 3px solid transparent;")
+                            .arg(alt ? ui::colors::BG_RAISED() : "transparent");
+        }
+
         auto* row = new QWidget(this);
-        row->setStyleSheet(QString("background: %1;").arg(alt ? ui::colors::BG_RAISED() : "transparent"));
+        row->setStyleSheet(row_style);
         auto* rl = new QHBoxLayout(row);
         rl->setContentsMargins(8, 4, 8, 4);
 
-        // Event name
+        // Event name — bold + bright on tomorrow rows so it scans at speed.
         QString display_name = event_name;
         if (display_name.length() > 28)
             display_name = display_name.left(26) + "…";
         auto* ev_lbl = new QLabel(display_name);
-        ev_lbl->setToolTip(event_name); // full name on hover
+        // Tomorrow tooltip explicitly says "tomorrow" so the user knows
+        // why the row is highlighted without needing legend documentation.
+        QString tip = event_name;
+        if (is_tomorrow)
+            tip += "\n\n⚠ Releases TOMORROW — review any overnight positions.";
+        else if (is_today)
+            tip += "\n\n● Releases TODAY.";
+        ev_lbl->setToolTip(tip);
+        const QString ev_color = is_tomorrow ? ui::colors::AMBER() : ui::colors::TEXT_PRIMARY();
+        const QString ev_weight = is_tomorrow ? "font-weight: bold;" : "";
         ev_lbl->setStyleSheet(
-            QString("color: %1; font-size: 10px; background: transparent;").arg(ui::colors::TEXT_PRIMARY()));
+            QString("color: %1; font-size: 10px; background: transparent; %2").arg(ev_color, ev_weight));
         rl->addWidget(ev_lbl, 4);
 
         auto* cty_lbl = new QLabel(country);
@@ -234,8 +298,10 @@ void EconomicCalendarWidget::populate(const QJsonArray& events) {
         rl->addWidget(cty_lbl, 1);
 
         auto* date_lbl = new QLabel(date_display);
+        const QString date_color = is_tomorrow ? ui::colors::AMBER() : ui::colors::TEXT_SECONDARY();
+        const QString date_weight = is_tomorrow ? "font-weight: bold;" : "";
         date_lbl->setStyleSheet(
-            QString("color: %1; font-size: 9px; background: transparent;").arg(ui::colors::TEXT_SECONDARY()));
+            QString("color: %1; font-size: 9px; background: transparent; %2").arg(date_color, date_weight));
         rl->addWidget(date_lbl, 2);
 
         auto* act_lbl = new QLabel(actual.isEmpty() ? "--" : actual);

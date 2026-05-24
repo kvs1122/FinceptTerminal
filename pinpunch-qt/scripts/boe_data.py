@@ -1302,7 +1302,6 @@ class BankOfEnglandWrapper:
                 },
                 "data_update_schedule": "Aim: by 10am on publication day; daily rates 1-2 working days after reporting date",
                 "historical_depth": "Some daily series back to 1975; M4 monthly from June 1982",
-                "contact": "BEEDSQueries@bankofengland.co.uk",
                 "database_home": "https://www.bankofengland.co.uk/boeapps/database/",
                 "help_page": "https://www.bankofengland.co.uk/boeapps/database/help.asp",
                 "statistics_home": "https://www.bankofengland.co.uk/statistics",
